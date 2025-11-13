@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+
+################################################################
+# Run the VBS ZZ analysis on NanoAOD files                     #
+#                                                              #
+# Author: Alberto Mecca (alberto.mecca@cern.ch)                #
+# Initial revision: 2025-07-09                                 #
+################################################################
+
+import os
+import sys
+from argparse import ArgumentParser, Namespace
+import logging
+
+import ROOT
+
+from ZZAnalysis.NanoAnalysis.tools import setConf
+
+# Python doesn't like names starting with a digit; to import from modules
+# in "4l_channel" we have a few options:
+# - rename the directory (e.g. to channel_4l)
+# - try to do stuff with importlib
+# - append the absolute path to "4l_channel/python/" to sys.path
+sys.path.append(os.path.realpath('../python'))
+from utils import TFileContext, mkhist
+
+
+def main(args):
+    logging.debug('args: %s', args)
+
+    if(args.multithread):
+        ROOT.EnableImplicitMT()
+
+    # Get the Events tree
+    df = ROOT.RDataFrame(
+        # 'Events'
+        'ZZTree/candTree'
+        , args.fname_in)
+
+    if(args.list_columns):
+        print(df.Describe())
+        return 0
+
+    # Run the analysis
+    histograms = analyze(df, args)
+
+    # Write histograms
+    with TFileContext(args.fname_out, 'RECREATE') as tf_out:
+        for hist in histograms:
+            hname = hist.GetName()
+            if('/' in hname):
+                raise NotImplementedError('Automatic creation of TDirectories')
+            hist.Write()
+    logging.info('wrote histograms to "%s"', args.fname_out)
+
+    return 0
+
+
+def main_fromdict(**kwargs):
+    '''Utility to call the main from another script with keyword arguments'''
+    main(Namespace(kwargs))
+
+
+def parse_args():
+    parser = ArgumentParser('Run the VBS ZZjj analysis on a NanoAOD file from ZZ (Run 3)',
+                            epilog='outputs ROOT files with histograms. For efficiency, '
+                            'the fancy plot formatting is in a separate step')
+    parser.add_argument('fname_in', metavar='FILE', help='Input: (post-processed) NanoAOD file')
+    parser.add_argument('-o', '--output', default='hists.root', dest='fname_out', metavar='FILE', help='Default: %(default)s')
+    parser.add_argument(      '--list', dest='list_columns', action='store_true', help='List the columns present in the input file and exit')
+    parser.add_argument('-n', '--max-entries', type=int, default=0, metavar='N', help='Process a maximum of N entries (disables multithreading)')
+    # parser.add_argument(      '--mt'   , dest='multithread', action='store_true' , help='Enable ROOT implicit multithread (default)', default=True)
+    parser.add_argument(      '--no-mt', dest='multithread', action='store_false', help='Disable ROOT implicit multithread (output entries will not be ordered)')
+    parser.add_argument('--log', dest='loglevel', metavar='LEVEL', default='WARNING', help='Level for the python logging module. Can be either a mnemonic string like DEBUG, INFO or WARNING or an integer (lower means more verbose).')
+    args = parser.parse_args()
+
+    if(args.max_entries > 0):
+        args.multithread = False
+
+    return args
+
+
+def analyze(df, args):
+    tot_entries = df.Count().GetValue()
+    logging.info(    'Total entries   : %d', tot_entries)
+
+    if(args.max_entries > 0):
+        max_entries = min(args.max_entries, tot_entries)
+        df = df.Range(0, max_entries)
+        logging.info('Filtered entries: %d', max_entries)
+
+    futures = [] # <ROOT.RDF.RResultPtr>
+    histograms = [] # <ROOT.TH1F>
+
+    # Aliases
+    df = df.Alias('weight', 'overallEventWeight')
+
+    # Request some histograms
+    futures.append(mkhist(df, 'ZZMass', '', 60,100,700))
+    futures.append(mkhist(df, 'absdetajj', '', 5,0,5))
+
+    # Define a new variable and add an histogram
+    df = df.Define('Z1Mass_plus_Z2Mass', 'Z1Mass + Z2Mass')
+    futures.append(mkhist(df, 'Z1Mass_plus_Z2Mass', '', 60,60,360))
+
+    logging.info("Finished setting up the analysis")
+
+    # Calling GetValue() on a RResultPtr causes the event loop to run
+    histograms = [f.GetValue() for f in futures]
+    df.Report().GetValue().Print()
+
+    return histograms
+
+
+if __name__ == '__main__':
+    args = parse_args()
+    loglevel = args.loglevel.upper() if not args.loglevel.isdigit() else int(args.loglevel)
+    logging.basicConfig(format='%(levelname)s:%(module)s:%(funcName)s: %(message)s', level=loglevel)
+
+    exit(main(args))
