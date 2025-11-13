@@ -1,0 +1,15 @@
+# C/C++ extensions and ROOT dictionaries
+*.o
+*.d
+*.so
+*.root
+*.pcm
+*.rootmap
+*.cmake
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+
+# Emacs backups
+*.*~
