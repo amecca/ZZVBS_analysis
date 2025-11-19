@@ -1,6 +1,7 @@
 CFLAGS   = -Iinterface -Wall -Werror -g -O1 -fno-omit-frame-pointer -lmath -fpic
 CXXFLAGS = $(CFLAGS) $(shell root-config --cflags) -I$(shell root-config --incdir)
 LDFLAGS  = -g -I. -Iinterface $(shell root-config --cflags)
+CLINGFLAGS= -f -Iinterface -I$(root-config --incdir) -rml --failOnWarnings -D__ACLIC__
 VPATH ::= ./src ./interface
 LIBS ::= cConstants_c.so FakeRates_cpp.so
 LIBPATHS ::= $(patsubst %,lib/%,$(LIBS))
@@ -28,10 +29,22 @@ bin/%_c.o: src/%.c interface/%.h | bin
 lib/%_c.so: bin/%_c.o | lib
 	$(CC) -rdynamic -shared $< -o $@
 
+# ROOT C++ shared libraries with dictionary
+lib/%_cpp_ACLiC_dict.cxx: src/%.cpp interface/%.hpp | lib
+	rootcling $(CLINGFLAGS) $@ $<
+.NOTINTERMEDIATE: lib/FakeRates_cpp_ACLiC_dict.cxx
+
+lib/%_cpp_ACLiC_dict: lib/%_cpp_ACLiC_dict.cxx
+	$(CXX) -I. $(CXXFLAGS) -c $< -o $@
+.NOTINTERMEDIATE: lib/FakeRates_cpp_ACLiC_dict
+
+lib/%_cpp.so: lib/%_cpp_ACLiC_dict | lib
+	$(CXX) -rdynamic -shared $< -o $@
+
 # C++ libraries are compiled with root from the source
-lib/%_cpp.so: src/%.cpp interface/%.hpp | lib
-	root -l -e ".I ./interface" -e ".L $<++" -q
-	mv src/$(*)_* lib/
+# lib/%_cpp.so: src/%.cpp interface/%.hpp | lib
+# 	root -l -e ".I ./interface" -e ".L $<+" -q
+# 	mv src/$(*)_* lib/
 
 bin lib:
 	mkdir $@
