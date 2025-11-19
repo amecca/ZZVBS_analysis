@@ -1,6 +1,10 @@
 #ifndef CCONSTANTS_H
 #define CCONSTANTS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 float getDVBF2jetsConstant(float ZZMass);
 float getDVBF1jetConstant(float ZZMass);
 float getDWHhConstant(float ZZMass);
@@ -33,5 +37,9 @@ enum FSLFO {
 /* Get the Final State in terms of Lepton Flavour (with order, i.e. 2e2mu != 2mu2m)*/
 enum FSLFO get_FSLFO(int Z1Flav, int Z2Flav);
 float get_fs_ROS_SS(enum FSLFO f);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif

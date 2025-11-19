@@ -3,6 +3,10 @@
 #include "stdlib.h"
 #include "cConstants.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 const float PI_FLOAT = 3.14159f;
 
 float getDVBF2jetsConstant(float ZZMass){
@@ -164,3 +168,7 @@ float get_fs_ROS_SS(enum FSLFO c){
   if(c == FSLFO_2mu2e) return 1.00;
   return 1.;
 }
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
