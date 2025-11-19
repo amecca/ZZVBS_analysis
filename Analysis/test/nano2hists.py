@@ -48,10 +48,22 @@ def main(args):
     with TFileContext(args.fname_out, 'RECREATE') as tf_out:
         for hist in histograms:
             hname = hist.GetName()
-            if('/' in hname):
-                raise NotImplementedError('Automatic creation of TDirectories')
-            hist.Write()
-    logging.info('wrote histograms to "%s"', args.fname_out)
+
+            path_elems = hname.split('/')
+            path_elems.reverse()
+            curdir = tf_out
+            logging.debug('h name: %s -> %s', hname, path_elems)
+            while(len(path_elems) > 1):
+                dirname = path_elems.pop()
+                logging.debug('    making dir "%s"', dirname)
+                curdir = curdir.mkdir(dirname)
+                curdir.cd()
+            basename = path_elems.pop()
+    
+            hist.Write(basename)
+            logging.debug('wrote "%s"', basename)
+            tf_out.cd()
+    logging.info('wrote %d histograms to "%s"', len(histograms), args.fname_out)
 
     return 0
 
@@ -101,7 +113,7 @@ def analyze(df, args):
 
     # Define a new variable and add an histogram
     df = df.Define('Z1Mass_plus_Z2Mass', 'Z1Mass + Z2Mass')
-    futures.append(mkhist(df, 'Z1Mass_plus_Z2Mass', '', 60,60,360))
+    futures.append(mkhist(df, 'derived/Z1Mass_plus_Z2Mass', '', 60,60,360, v='Z1Mass_plus_Z2Mass'))
 
     logging.info("Finished setting up the analysis")
 
