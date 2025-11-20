@@ -18,6 +18,20 @@ class TFileContext(object):
         self.tfile.Close()
 
 
+# https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVRun3Analysis
+# https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun3
+lumi_dict = {
+    # Errors expressed as lnN parameters: e.g. 1.6% -> 1.016
+    'Run2'    : {'value':137620  , 'error_uncorrelated': 1.016,'error_correlated': 0},
+    '2022pre' : {'value':  7980.4, 'error_uncorrelated': 'Ask LUMI POG', 'error_correlated': 'Ask LUMI POG'},
+    '2022EE'  : {'value': 26671.7, 'error_uncorrelated': 'Ask LUMI POG', 'error_correlated': 'Ask LUMI POG'},
+    '2023pre' : {'value': 18063  , 'error_uncorrelated': 'Ask LUMI POG', 'error_correlated': 'Ask LUMI POG'},
+    '2023BPix': {'value':  9693  , 'error_uncorrelated': 'Ask LUMI POG', 'error_correlated': 'Ask LUMI POG'},
+    '2024'    : {'value':109080  , 'error_uncorrelated': 'Ask LUMI POG', 'error_correlated': 'Ask LUMI POG'},
+    'Run3'    : {'value':171488  , 'error_uncorrelated': 'Ask LUMI POG', 'error_correlated': 'Ask LUMI POG'},
+}
+
+
 class FinalState(Enum):
     fs4e = 0
     fs4mu = 1
