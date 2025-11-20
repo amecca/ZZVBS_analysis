@@ -33,8 +33,8 @@ def main(args):
 
     # Get the Events tree
     df = ROOT.RDataFrame(
-        # 'Events'
-        'ZZTree/candTree'
+        'Events'
+        # 'ZZTree/candTree'
         , args.fname_in)
 
     if(args.list_columns):
@@ -106,14 +106,16 @@ def analyze(df, args):
 
     # Aliases
     df = df.Alias('weight', 'overallEventWeight')
+    df = df.Define('ZZ_mass', 'ZZCand_mass[bestCandIdx]')
+    df = df.Define('ZZ_KD'  , 'ZZCand_KD[bestCandIdx]')
+    df = df.Define('j1_eta', 'Jet_eta[JetLeadingIdx]')
+    df = df.Define('j2_eta', 'Jet_eta[JetSubleadingIdx]')
+    df = df.Define('absdetajj', 'fabs(j1_eta-j2_eta)')
 
     # Request some histograms
-    futures.append(mkhist(df, 'ZZMass', '', 60,100,700))
-    futures.append(mkhist(df, 'absdetajj', '', 5,0,5))
-
-    # Define a new variable and add an histogram
-    df = df.Define('Z1Mass_plus_Z2Mass', 'Z1Mass + Z2Mass')
-    futures.append(mkhist(df, 'derived/Z1Mass_plus_Z2Mass', '', 60,60,360, v='Z1Mass_plus_Z2Mass'))
+    futures.append(mkhist(df, 'ZZ_mass', '', 60,0,600))
+    futures.append(mkhist(df, 'ZZ_KD'  , '', 50,0,1))
+    futures.append(mkhist(df, 'absdetajj', '', 60,0,6))
 
     logging.info("Finished setting up the analysis")
 
