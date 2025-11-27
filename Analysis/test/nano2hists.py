@@ -11,6 +11,7 @@ import os
 import sys
 from argparse import ArgumentParser, Namespace
 import logging
+from time import time
 
 import ROOT
 
@@ -42,7 +43,10 @@ def main(args):
         return 0
 
     # Run the analysis
+    t_start = time()
     histograms = analyze(df, args)
+    t_end = time()
+    logging.info('Time elapsed: %g s', t_end-t_start)
 
     # Write histograms
     with TFileContext(args.fname_out, 'RECREATE') as tf_out:
@@ -111,6 +115,11 @@ def analyze(df, args):
     df = df.Define('j1_eta', 'Jet_eta[JetLeadingIdx]')
     df = df.Define('j2_eta', 'Jet_eta[JetSubleadingIdx]')
     df = df.Define('absdetajj', 'fabs(j1_eta-j2_eta)')
+
+    # Selection
+    df = df.Filter('ZZ_mass > 100')
+    df = df.Filter('nJet >= 2')
+    df = df.Filter('absdetajj > 1')
 
     # Request some histograms
     futures.append(mkhist(df, 'ZZ_mass', '', 60,0,600))
