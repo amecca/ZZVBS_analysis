@@ -82,7 +82,7 @@ def parse_args():
                             epilog='outputs ROOT files with histograms. For efficiency, '
                             'the fancy plot formatting is in a separate step')
     parser.add_argument('fname_in', metavar='FILE', help='Input: (post-processed) NanoAOD file')
-    parser.add_argument('-o', '--output', default='hists.root', dest='fname_out', metavar='FILE', help='Default: %(default)s')
+    parser.add_argument('-o', '--output', default=None, dest='fname_out', metavar='FILE', help='Default: %(default)s')
     parser.add_argument(      '--list', dest='list_columns', action='store_true', help='List the columns present in the input file and exit')
     parser.add_argument('-n', '--max-entries', type=int, default=0, metavar='N', help='Process a maximum of N entries (disables multithreading)')
     # parser.add_argument(      '--mt'   , dest='multithread', action='store_true' , help='Enable ROOT implicit multithread (default)', default=True)
@@ -92,6 +92,9 @@ def parse_args():
 
     if(args.max_entries > 0):
         args.multithread = False
+    if(args.fname_out is None):
+        split = os.path.splitext(args.fname_in)
+        args.fname_out = split[0]+'_hists' + split[1]
 
     return args
 
