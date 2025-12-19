@@ -1,5 +1,6 @@
 # Utiltiies, constants and enums
 from enum import Enum
+import logging
 import ROOT
 
 from ROOT.RDF import TH1DModel
