@@ -131,11 +131,41 @@ def analyze(df, args):
     futures.append(mkhist(df, 'ZZ_KD'  , ';KD', 50,0,1))
     futures.append(mkhist(df, 'absdetajj', ';|#Delta #eta_{jj}|', 60,0,6))
 
+    # MELA probabilities (automatic from the branch names)
+    branches = [str(b) for b in df.GetColumnNames()]
+    branches_prob = [b for b in branches if b.startswith('ZZCand_P_')]
+    probs = [p[len('ZZCand_P_'):] for p in branches_prob]
+    logging.debug('MELA probs (%d): %s', len(probs), probs)
+    for prob in probs:
+        value = 'ZZCand_P_{0}[bestCandIdx]'.format(prob)
+        logging.debug('%s: %s', prob, value)
+        df = df.Define(prob, value)
+        df = df.Define(prob+'_log', 'log(%s)'%(prob))
+        if  (prob == 'JJVBF_BKG_MCFM_JECNominal'): title = 'EW'
+        elif(prob == 'JJQCD_BKG_MCFM_JECNominal'): title = 'QCD'
+        else: title = prob
+        futures.append(mkhist (df, 'MELA_'+prob       , ';P(%s)'     %(title), 50, 0 , 1, v=prob))
+        futures.append(mkhist (df, 'MELA_'+prob+'_log', ';log(P(%s))'%(title), 50,-50, 0, v=prob+'_log'))
+
+    # Mela ratio
+    if(all(p in probs for p in ('JJVBF_BKG_MCFM_JECNominal', 'JJQCD_BKG_MCFM_JECNominal'))):
+        df = df.Define('P_EWK', 'ZZCand_P_{0}[bestCandIdx]'.format('JJVBF_BKG_MCFM_JECNominal'))
+        df = df.Define('P_QCD', 'ZZCand_P_{0}[bestCandIdx]'.format('JJQCD_BKG_MCFM_JECNominal'))
+        df = df.Define('ratio_EW_EWpQCD', 'P_EWK/(P_EWK+P_QCD)')
+        futures.append(mkhist (df, 'ratio_EW_EWpQCD', ';P_{EW}/(P_{EW}+P_{QCD})', 51, 0, 1+1./50))
+    else:
+        df = df.Define('P_EWK', '0').Define('P_QCD', '0')
+
+    zeroMELA = df.Filter("P_EWK == 0 && P_QCD == 0")
+    n_zeroMELA = zeroMELA.Count()
+    n_total = df.Count()
+
     logging.info("Finished setting up the analysis")
 
     # Calling GetValue() on a RResultPtr causes the event loop to run
     histograms = [f.GetValue() for f in futures]
     df.Report().GetValue().Print()
+    logging.info('Events with MELA==0 / total: %d/%d', n_zeroMELA.GetValue(), n_total.GetValue())
 
     return histograms
 
