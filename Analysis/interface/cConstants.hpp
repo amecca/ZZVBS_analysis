@@ -38,6 +38,10 @@ enum FSLFO {
 enum FSLFO get_FSLFO(int Z1Flav, int Z2Flav);
 float get_fs_ROS_SS(enum FSLFO f);
 
+int get_FSLFO_int(int Z1Flav, int Z2Flav){
+  return (int) get_FSLFO(Z1Flav, Z2Flav);
+}
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

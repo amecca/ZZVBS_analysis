@@ -1,7 +1,7 @@
 #include "math.h"
 #include "stdbool.h"
 #include "stdlib.h"
-#include "cConstants.h"
+#include "cConstants.hpp"
 
 #ifdef __cplusplus
 extern "C" {

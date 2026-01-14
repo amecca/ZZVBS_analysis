@@ -3,7 +3,7 @@ CXXFLAGS = $(CFLAGS) $(shell root-config --cflags) -I$(shell root-config --incdi
 LDFLAGS  = -g -I. -Iinterface $(shell root-config --cflags)
 CLINGFLAGS= -f -Iinterface -I$(root-config --incdir) -rml --failOnWarnings -D__ACLIC__
 VPATH ::= ./src ./interface
-LIBS ::= cConstants_c.so FakeRates_cpp.so
+LIBS ::= cConstants_cpp.so FakeRates_cpp.so
 LIBPATHS ::= $(patsubst %,lib/%,$(LIBS))
 
 ### Main target
