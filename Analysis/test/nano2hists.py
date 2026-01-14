@@ -17,13 +17,8 @@ import ROOT
 
 from ZZAnalysis.NanoAnalysis.tools import setConf
 
-# Python doesn't like names starting with a digit; to import from modules
-# in "4l_channel" we have a few options:
-# - rename the directory (e.g. to channel_4l)
-# - try to do stuff with importlib
-# - append the absolute path to "4l_channel/python/" to sys.path
-sys.path.append(os.path.realpath('../python'))
-from utils import TFileContext, mkhist
+from ZZVBS_analysis.Analysis.utils import TFileContext, mkhist, FinalState
+from ZZVBS_analysis.Analysis.libutils import find_load_lib
 
 
 def main(args):
@@ -41,6 +36,10 @@ def main(args):
     if(args.list_columns):
         print(df.Describe())
         return 0
+
+    # Load shared libraries
+    ROOT.gInterpreter.AddIncludePath('../interface')
+    find_load_lib('cConstants')
 
     # Run the analysis
     t_start = time()
@@ -63,6 +62,8 @@ def main(args):
                 curdir = curdir.mkdir(dirname)
                 curdir.cd()
             basename = path_elems.pop()
+
+            if('FSLFO' in hname): fix_xlabels_FSLFO(hist)
     
             hist.Write(basename)
             logging.debug('wrote "%s"', basename)
@@ -120,6 +121,9 @@ def analyze(df, args):
     df = df.Define('j1_eta', 'Jet_eta[JetLeadingIdx]')
     df = df.Define('j2_eta', 'Jet_eta[JetSubleadingIdx]')
     df = df.Define('absdetajj', 'fabs(j1_eta-j2_eta)')
+    df = df.Define('Z1flav', 'ZZCand_Z1flav[bestCandIdx]')
+    df = df.Define('Z2flav', 'ZZCand_Z2flav[bestCandIdx]')
+    df = df.Define('FSLFO', 'get_FSLFO(Z1flav, Z2flav)') # Final State, Lepton Flavour Order (ie 2e2mu != 2mu2e)
 
     # Selection
     df = df.Filter(*['ZZ_mass > 100']*2)
@@ -130,6 +134,15 @@ def analyze(df, args):
     futures.append(mkhist(df, 'ZZ_mass', ';m_{ZZ} [GeV]', 60,0,600))
     futures.append(mkhist(df, 'ZZ_KD'  , ';KD', 50,0,1))
     futures.append(mkhist(df, 'absdetajj', ';|#Delta #eta_{jj}|', 60,0,6))
+    futures.append(mkhist(df, 'FSLFO', ';Final state', 4,0,4))
+
+    # Histograms by channel
+    for fs in FinalState:
+        if fs == FinalState.fs4l: continue
+        df_ch = df.Filter('FSLFO==%d' %(fs.value))
+        fsname = fs.name.replace('fs','')
+        fstitle= fsname.replace('mu','#mu').strip()
+        futures.append(mkhist(df_ch, 'ZZ_mass_%s'%(fsname), ';m_{ZZ} [GeV], %s'%(fstitle), 60,0,600, v='ZZ_mass'))
 
     # MELA probabilities (automatic from the branch names)
     branches = [str(b) for b in df.GetColumnNames()]
@@ -168,6 +181,14 @@ def analyze(df, args):
     logging.info('Events with MELA==0 / total: %d/%d', n_zeroMELA.GetValue(), n_total.GetValue())
 
     return histograms
+
+
+def fix_xlabels_FSLFO(h):
+    xaxis = h.GetXaxis()
+    xaxis.SetBinLabel(1, '4e')
+    xaxis.SetBinLabel(2, '2e2#mu')
+    xaxis.SetBinLabel(3, '2#mu2e')
+    xaxis.SetBinLabel(4, '4#mu')
 
 
 if __name__ == '__main__':
