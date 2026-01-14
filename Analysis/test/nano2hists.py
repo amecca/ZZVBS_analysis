@@ -69,6 +69,8 @@ def main(args):
             tf_out.cd()
     logging.info('wrote %d histograms to "%s"', len(histograms), args.fname_out)
 
+    ROOT.RDF.SaveGraph(df, './nano2hists.dot')
+
     return 0
 
 
@@ -120,14 +122,14 @@ def analyze(df, args):
     df = df.Define('absdetajj', 'fabs(j1_eta-j2_eta)')
 
     # Selection
-    df = df.Filter('ZZ_mass > 100')
-    df = df.Filter('nJet >= 2')
-    df = df.Filter('absdetajj > 1')
+    df = df.Filter(*['ZZ_mass > 100']*2)
+    df = df.Filter(*['nJet >= 2'    ]*2)
+    df = df.Filter(*['absdetajj > 1']*2)
 
     # Request some histograms
-    futures.append(mkhist(df, 'ZZ_mass', '', 60,0,600))
-    futures.append(mkhist(df, 'ZZ_KD'  , '', 50,0,1))
-    futures.append(mkhist(df, 'absdetajj', '', 60,0,6))
+    futures.append(mkhist(df, 'ZZ_mass', ';m_{ZZ} [GeV]', 60,0,600))
+    futures.append(mkhist(df, 'ZZ_KD'  , ';KD', 50,0,1))
+    futures.append(mkhist(df, 'absdetajj', ';|#Delta #eta_{jj}|', 60,0,6))
 
     logging.info("Finished setting up the analysis")
 
