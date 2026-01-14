@@ -24,29 +24,25 @@ class VarInfo:
 
 class SampleInfo:
     '''
-    Simple object holding the list of file names and a title which is used as
-    a label in the TLegend
+    Metadata about a sample: info about how to plot, which files to use, etc.
     '''
-    def __init__(self, fnames: list[str], title: str):
-        self.fnames = files
-
-    def get_path(self, name: str, dirpath: str):
-        return os.path.join(dirpath, name+'.root')
-
-
-class Sample:
-    '''
-    A sample is made of one or more phisical files.
-    It holds handles to one or more TFiles and information (e.g. title/label) on how to be ploted.
-    '''
-    def __init__(self, name, fnames: list[str], title: str, dirpath: str, color: str,
+    def __init__(self, name, fpaths: list[str], title: str, color: str,
                  **kwargs):
         self.name = name
         self.title = title
         self.color = color
+        self.fpaths = fpaths
+
+
+class SampleHandle(SampleInfo):
+    '''
+    A sample is made of one or more phisical files.
+    It holds handles to one or more TFiles and information (e.g. title/label) on how to be ploted.
+    '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.files = []
-        for name in fnames:
-            fpath = os.path.join(dirpath, name+'.root')
+        for fpath in self.fpaths:
             try:
                 f = ROOT.TFile(fpath)
             except OSError as e:
@@ -70,9 +66,9 @@ class Sample:
         res = add_list_TObj(*hlist)
         return res
 
-    def close_files(self):
+    def __del__(self):
         for f in self.files:
-            f.Close()
+            if(f.IsOpen()): f.Close()
 
 
 def add_list_TObj(*args):
@@ -168,5 +164,5 @@ def clamp_expnd_r(lo, hi, y_scale=0.1, min_lo=0., max_lo=0.9, min_hi=1.1, max_hi
 
 def TH1_integr_and_err(h, binx1=0, binx2=-1):
     e = c_double(0.)
-    i = h.IntegralAndError(binx1, binx2, e)
+    i = h.IntegralAndError(binx1, binx2, e) if h else 0.
     return i, e.value

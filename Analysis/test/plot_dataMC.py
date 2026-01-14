@@ -18,7 +18,7 @@ import cmsstyle
 
 import sys
 sys.path.append('../python')
-from plotutils import VarInfo, SampleInfo, Sample, \
+from plotutils import VarInfo, SampleInfo, SampleHandle, \
     TH1_integr_and_err, cmsDiCanvas_fromTH1, getTAxisLimits
 from utils import lumi_dict
 
@@ -58,11 +58,14 @@ def main(args: Namespace):
     samples_MC = []
     sample_data = None
     for name, v in sample_dicts.items():
+        # Put the absolute path
+        v['fpaths'] = [os.path.join(args.inputdir, f+'.root') for f in v['fnames']]
+
         if(v is None):
             logging.warning('Missing sample "%s"', name)
             continue
 
-        s = Sample(name=name, **v, dirpath=args.inputdir)
+        s = SampleHandle(name=name, **v)
         if name == 'data': sample_data = s
         else: samples_MC.append(s)
 
@@ -80,13 +83,10 @@ def main(args: Namespace):
     for var in variables:
         plot_var(var, sample_data, samples_MC, args)
 
-    for sample in samples_MC: sample.close_files()
-    sample_data.close_files()
-
     return 0
 
 
-def plot_var(var: VarInfo, sample_data: Sample, samples_MC: list[Sample], args: Namespace):
+def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHandle], args: Namespace):
     '''Actually plot a single histogram'''
     logging.info('Plotting %s', var.name)
 
@@ -95,6 +95,9 @@ def plot_var(var: VarInfo, sample_data: Sample, samples_MC: list[Sample], args: 
     refs_for_legend = []
     for sample in samples_MC:
         h = sample.get_hist(var.name)
+        if(h is None):
+            logging.warning('No histogram for sample %s', sample.name)
+            continue
         h.SetFillColor(sample.color)
         h.SetLineColor(ROOT.kBlack)
         if(logging.getLogger().isEnabledFor(logging.DEBUG)):
@@ -102,6 +105,10 @@ def plot_var(var: VarInfo, sample_data: Sample, samples_MC: list[Sample], args: 
             logging.debug('Add %s: %+7.5g +- %+7.5g', sample.name, i, e)
         stack.Add(h)
         refs_for_legend.append([h, sample.title])
+
+    if(stack.GetNhists() == 0):
+        logging.error('No MC histograms for %s', var.name)
+        return 1
 
     hdata = None #sample_data.get_hist(var.name)
     is_asimov = False
