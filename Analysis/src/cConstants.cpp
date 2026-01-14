@@ -154,7 +154,7 @@ enum FSLFO get_FSLFO(int Z1Flav, int Z2Flav){
   default: return r;
   }
   switch(abs(Z2Flav)){
-  case 121: r = (c1==1 ? FSLFO_4e : FSLFO_2mu2e); break;
+  case 121: r = (c1==1 ? FSLFO_4e : FSLFO_2e2mu); break;
   case 169: r = (c1==1 ? FSLFO_2mu2e: FSLFO_4mu); break;
   default: return r;
   }
