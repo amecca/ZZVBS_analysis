@@ -30,8 +30,8 @@ lib/%_c.so: bin/%_c.o | lib
 	$(CC) -rdynamic -shared $< -o $@
 
 # ROOT C++ shared libraries with dictionary
-lib/%_cpp_ACLiC_dict.cxx: src/%.cpp interface/%.hpp | lib
-	rootcling $(CLINGFLAGS) $@ $<
+lib/%_cpp_ACLiC_dict.cxx: src/%.cpp interface/%.hpp src/LinkDef.h | lib
+	rootcling $(CLINGFLAGS) $@ $^
 .NOTINTERMEDIATE: lib/FakeRates_cpp_ACLiC_dict.cxx
 
 lib/%_cpp_ACLiC_dict: lib/%_cpp_ACLiC_dict.cxx

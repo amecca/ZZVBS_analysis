@@ -1,7 +1,7 @@
 // Include classes
 #include "TGraphErrors.h"
 
-#include "FakeRates.h"
+#include "FakeRates.hpp"
 
 // Helper
 TH1F* _h_from_tge(const TGraphErrors&);
