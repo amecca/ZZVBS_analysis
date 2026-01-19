@@ -67,8 +67,10 @@ class SampleHandle(SampleInfo):
         return res
 
     def __del__(self):
-        for f in self.files:
-            if(f.IsOpen()): f.Close()
+        try:
+            for f in self.files:
+                if(f and f.IsOpen()): f.Close()
+        except AttributeError: pass
 
 
 def add_list_TObj(*args):
