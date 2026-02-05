@@ -29,9 +29,15 @@ variable_dicts = [
     {'name':'absdetajj', 'xtitle':'|#Delta#eta(j1,j2)|', 'logy':True}
 ]
 
+fnames_2024_gg4e    = ['ggTo4e_Contin_MCFM701_Chunk%d'    %(i) for i in range(16+1)]
+fnames_2024_gg2e2mu = ['ggTo2e2mu_Contin_MCFM701_Chunk%d' %(i) for i in range(24+1)]
+fnames_2024_gg4mu   = ['ggTo4mu_Contin_MCFM701_Chunk%d'   %(i) for i in range(16+1)]
+# fnames_2024_data    =
 sample_dicts = {
-    'qqZZ': {'title': 'qq #rightarrow ZZ #rightarrow 4l', 'fnames':['ZZTo4l']},
-    'ggZZ': {'title': 'gg #rightarrow ZZ #rightarrow 4l', 'fnames':[f+'_Contin_MCFM701' for f in ['ggTo4e', 'ggTo2e2mu', 'ggTo4mu']]},
+    'qqZZ-EWK': {'title': 'qq #rightarrow ZZjj #rightarrow 4l 2j EWK'    , 'fnames':['ZZTo4l_2Jets_EW_Chunk%d'      %(i) for i in range(2+1)]},
+    'qqZZ-int': {'title': 'qq #rightarrow ZZjj #rightarrow 4l 2j interf.', 'fnames':['ZZTo4l_2Jets_EW_QCD_Chunk%d' %(i) for i in range(3+1)]},
+    'qqZZ-QCD': {'title': 'qq #rightarrow ZZjj #rightarrow 4l 2j QCD'    , 'fnames':['ZZTo4l_2Jets_QCD_Chunk%d'    %(i) for i in range(1+1)]},
+    'ggZZ': {'title': 'gg #rightarrow ZZ #rightarrow 4l', 'fnames':fnames_2024_gg4e+fnames_2024_gg2e2mu+fnames_2024_gg4mu},
     'data': {'title': 'Data', 'fnames': ['data'], 'color': ROOT.kBlack},
 }
 
@@ -68,6 +74,11 @@ def main(args: Namespace):
         s = SampleHandle(name=name, **v)
         if name == 'data': sample_data = s
         else: samples_MC.append(s)
+
+    # Defaults for non-customized vars:
+    all_keys = {k.GetName() for k in samples_MC[0].files[0].GetListOfKeys()} #for f in samples_MC[0].files for k in f.GetListOfKeys()
+    new_keys = all_keys - {v.name for v in variables}
+    variables.extend([VarInfo(name=n, xtitle=None) for n in new_keys])
 
     # Customize style
     cmsstyle.SetExtraText("Preliminary")
@@ -110,31 +121,35 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
         logging.error('No MC histograms for %s', var.name)
         return 1
 
+    last_stack = stack.GetStack().Last()
+    if(var.xtitle is None): var.xtitle = last_stack.GetXaxis().GetTitle()
+
     hdata = None #sample_data.get_hist(var.name)
     is_asimov = False
     # Empty data (blind plots or we don't have the data)
     if(hdata is None):
         is_asimov = True
-        hdata = stack.GetStack().Last().Clone('data_asimov')
+        hdata = last_stack.Clone('data_asimov')
         # for b in range(0, hdata.GetNbinsX()+2):
         #     hdata.SetBinContent(b, 0)
         #     hdata.SetBinError  (b, 0)
+
     hdata.GetXaxis().SetTitle(var.xtitle)
 
     # Ratio
     ratio = ROOT.TGraphAsymmErrors()
     ratio.SetName('ratio')
     logging.debug('data: %s', hdata)
-    logging.debug('MC  : %s', stack.GetStack().Last())
-    ratio.Divide(hdata, stack.GetStack().Last(), 'pois')
+    logging.debug('MC  : %s', last_stack)
+    ratio.Divide(hdata, last_stack, 'pois')
 
     # Canvas creation
-    dicanvas_kwargs = dict(y_min=0, y_scale=1.5, min_hi_r=2., max_lo_r=0., range_include_err=True,
+    dicanvas_kwargs = dict(y_min=0, y_scale=2, min_hi_r=2., max_lo_r=0., range_include_err=True,
                            nameXaxis=var.xtitle, nameYaxis=var.ytitle, nameRatio='Data/Pred.',
                            iPos=11)
     if(args.y_max is not None): dicanvas_kwargs['y_max'] = args.y_max
     if(args.r_max is not None): dicanvas_kwargs['r_max'] = args.r_max
-    canvas = cmsDiCanvas_fromTH1(var.name, stack.GetStack().Last(), ratio,
+    canvas = cmsDiCanvas_fromTH1(var.name, last_stack, ratio,
                                  **dicanvas_kwargs)
     canvas.cd()
 
@@ -149,7 +164,7 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     canvas.cd(1)
 
     # Error band in the upper canvas
-    hMCErr = deepcopy(stack.GetStack().Last())
+    hMCErr = deepcopy(last_stack)
 
     hMCErr.SetFillStyle(3005)
     hMCErr.SetMarkerStyle(1)

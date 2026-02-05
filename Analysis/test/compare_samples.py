@@ -51,8 +51,18 @@ def plot_compare(key:str, sample1:SampleHandle, sample2:SampleHandle, **kwargs):
 
     h1 = sample1.get_hist(key)
     h2 = sample2.get_hist(key)
-    h1.Scale(kwargs.get('scale1', 1.))
-    h2.Scale(kwargs.get('scale2', 1.))
+    
+    if(h1.Integral(0,-1) == 0 and h2.Integral(0,-1) == 0):
+        logging.info('- %s: both hists are empty; skipping', key)
+        return
+
+    if(kwargs.get('norm', False)):
+        h1.Scale(1./h1.Integral(0,-1))
+        h2.Scale(1./h2.Integral(0,-1))
+    else:
+        h1.Scale(kwargs.get('scale1', 1.))
+        h2.Scale(kwargs.get('scale2', 1.))
+
     v1, e1 = TH1_integr_and_err(h1) if h1 is not None else (0, 0)
     v2, e2 = TH1_integr_and_err(h2) if h2 is not None else (0, 0)
     logging.debug('  1: %+.2f +- %.2f evts (%s)', v1, e1, sample1.title)
@@ -77,14 +87,15 @@ def plot_compare(key:str, sample1:SampleHandle, sample2:SampleHandle, **kwargs):
     # logging.debug('ratio (%d):', ratio.GetN())
     # for n in range(ratio.GetN())  : logging.debug('  %2d: (%.3g, %.3g)', n, ratio.GetPointX(n), ratio.GetPointY(n))
 
-    dicanvas_kwargs = dict(y_min=0, y_scale=1.5, min_hi_r=1.5, max_lo_r=0.5, range_include_err=True,
-                           max_hi_r=4., min_lo_r=0.,
+    dicanvas_kwargs = dict(y_min=0, y_scale=1.7, min_hi_r=1.1, max_lo_r=0.9, range_include_err=True,
+                           max_hi_r=1.2, min_lo_r=0.8,
                            iPos=11)
     canvas = cmsDiCanvas_fromTH1(key, h1, ratio,
                                  **dicanvas_kwargs)
 
     ### Upper pad ###
     canvas.cd(1)
+    # canvas.GetPad(1).SetLogy()
 
     # The legend needs to be created after the canvas, otherwise it won't be drawn
     leg_ymax = .875
@@ -128,6 +139,7 @@ def parse_args():
     parser.add_argument(      '--title-r',default='2/1'     , help='Y axis label in the ratio plot (default: %(default)s)')
     parser.add_argument(      '--scale1', default=1., type=float, help='global k-factor for sample 1')
     parser.add_argument(      '--scale2', default=1., type=float, help='global k-factor for sample 2')
+    parser.add_argument(      '--norm'  , action='store_true', help='Normalize both 1 and 2 so that the integral is 1')
     parser.add_argument('-o', '--outdir', default='comparesamples', metavar='DIR', help='Directory where plots will be saved. Default: %(default)s')
     parser.add_argument('-y', '--year', default='2022EE', help='Used to get lumi information')
     parser.add_argument('--log', dest='loglevel', metavar='LEVEL', default='WARNING', help='Level for the python logging module. Can be either a mnemonic string like DEBUG, INFO or WARNING or an integer (lower means more verbose).')

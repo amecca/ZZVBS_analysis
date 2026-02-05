@@ -168,3 +168,10 @@ def TH1_integr_and_err(h, binx1=0, binx2=-1):
     e = c_double(0.)
     i = h.IntegralAndError(binx1, binx2, e) if h else 0.
     return i, e.value
+
+
+def TH1_get_max_rigth(h):
+    '''Return the value of the highest bin after the middle (where the legend should be)'''
+    n = h.GetNbinsX()
+    return max(h.GetBinContent(i) for i in range(n//2, n+1))
+

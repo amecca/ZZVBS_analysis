@@ -120,6 +120,8 @@ def analyze(df, args):
     df = df.Alias('weight', 'overallEventWeight')
     df = df.Define('ZZ_mass', 'ZZCand_mass[bestCandIdx]')
     df = df.Define('ZZ_KD'  , 'ZZCand_KD[bestCandIdx]')
+    df = df.Define('j1_pt' , 'Jet_pt[JetLeadingIdx]')
+    df = df.Define('j2_pt' , 'Jet_pt[JetSubleadingIdx]')
     df = df.Define('j1_eta', 'Jet_eta[JetLeadingIdx]')
     df = df.Define('j2_eta', 'Jet_eta[JetSubleadingIdx]')
     df = df.Define('absdetajj', 'fabs(j1_eta-j2_eta)')
@@ -134,6 +136,10 @@ def analyze(df, args):
         df = df.Define(Zxlx+'_eta', 'Lepton_eta[%s_idx]' %(Zxlx))
         df = df.Define(Zxlx+'_phi', 'Lepton_phi[%s_idx]' %(Zxlx))
         df = df.Define(Zxlx+'_phinorm', Zxlx+'_phi/%f' %(math.pi))
+        futures.append(mkhist(df, '%s_pt' %(Zxlx),    ';%s p_{T} [GeV]'%(Zxlx), 60,0.,600., v='%s_pt'     %(Zxlx)))
+        futures.append(mkhist(df, '%s_eta'%(Zxlx),    ';%s #eta'       %(Zxlx), 0,-2.5,2.5, v='%s_eta'    %(Zxlx)))
+        futures.append(mkhist(df, '%s_phinorm'%(Zxlx),';%s #phi/#pi'   %(Zxlx), 50,-1.,1. , v='%s_phinorm'%(Zxlx)))
+
 
     df = df.Define('ZZ_Lepton_idx', 'ROOT::RVecI {'+
                    ','.join([ '%s_idx' %(Zxlx) for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2')])
@@ -142,10 +148,19 @@ def analyze(df, args):
 
     df = df.Define('ZZ_Muon_idx', 'filter_abs_pdgId(ZZ_Lepton_idx, Lepton_pdgId, 13)')
     df = df.Define('ZZ_Muon_pt', 'fill_with_indexes(Lepton_pt, ZZ_Muon_idx)')
+    df = df.Define('ZZ_Muon_eta', 'fill_with_indexes(Lepton_eta, ZZ_Muon_idx)')
     df = df.Define('ZZ_leadingMu_pt', 'ZZ_Muon_pt.size() > 0 ? ZZ_Muon_pt[0] : -1.')
     df = df.Define('ZZ_subleadMu_pt', 'ZZ_Muon_pt.size() > 1 ? ZZ_Muon_pt[1] : -1.')
-    futures.append(mkhist(df, 'ZZ_leadingMu_pt', ';leading #mu p_{T} [GeV]', 60,0,600))
-    futures.append(mkhist(df, 'ZZ_subleadMu_pt', ';sublead #mu p_{T} [GeV]', 60,0,600))
+    df = df.Define('ZZ_leadingMu_eta', 'ZZ_Muon_eta.size() > 0 ? ZZ_Muon_eta[0] : -100.')
+    df = df.Define('ZZ_subleadMu_eta', 'ZZ_Muon_eta.size() > 1 ? ZZ_Muon_eta[1] : -100.')
+    # df = df.Define('ZZ_Muon_idxMuon', )
+    df = df.Define('lastMu_lowPtMVA', '*std::min_element(Muon_mvaLowPt.begin(), Muon_mvaLowPt.end())')
+
+    futures.append(mkhist(df, 'ZZ_leadingMu_pt', ';leading #mu p_{T} [GeV]', 60,0.,300.))
+    futures.append(mkhist(df, 'ZZ_subleadMu_pt', ';sublead #mu p_{T} [GeV]', 60,0.,300.))
+    futures.append(mkhist(df, 'ZZ_leadingMu_eta', ';leading #mu #eta'      , 50,-2.5,2.5))
+    futures.append(mkhist(df, 'ZZ_subleadMu_eta', ';sublead #mu #eta'      , 50,-2.5,2.5))
+    futures.append(mkhist(df, 'lastMu_lowPtMVA', ';min(#mu MVA)'           , 40,-1.,1.))
 
     # mjj
     kinj1 = ['Jet_%s[JetLeadingIdx]'   %(var) for var in ('pt', 'eta', 'phi', 'mass')]
@@ -153,19 +168,26 @@ def analyze(df, args):
     df = df.Define('mj1j2' , 'sum_M_mass(' + ', '.join(kinj1 + kinj2) + ')')
 
     # inclusive histograms
+    # df = df.Filter(*['ZZ_mass > 180']*2)
+    # df = df.Filter(*['ZZ_mass < 340']*2)
     futures.append(mkhist(df, 'incl_nJets', ';# jets', 10,-0.5,9.5, v='nJet'))
 
     # Selection
-    df = df.Filter(*['ZZ_mass > 100']*2)
-    df = df.Filter(*['nJet >= 2'    ]*2)
-    df = df.Filter(*['absdetajj > 1']*2)
+    # df = df.Filter(*['ZZ_mass > 100']*2)
+    # df = df.Filter(*['ZZ_mass < 340']*2)
+    # df = df.Filter(*['nJet >= 2'    ]*2)
+    # df = df.Filter(*['absdetajj > 1']*2)
+    # df = df.Filter(*['mj1j2 > 100']*2)
 
     # Request some histograms
     futures.append(mkhist(df, 'ZZ_mass', ';m_{ZZ} [GeV]', 60,0,600))
     futures.append(mkhist(df, 'ZZ_KD'  , ';KD', 50,0,1))
     futures.append(mkhist(df, 'absdetajj', ';|#Delta #eta_{jj}|', 60,0,6))
+    futures.append(mkhist(df, 'j1_pt', ';j1 p_{T} [GeV]', 60,0,600))
+    futures.append(mkhist(df, 'j2_pt', ';j1 p_{T} [GeV]', 60,0,600))
     futures.append(mkhist(df, 'FSLFO', ';Final state', 4,0,4))
-    futures.append(mkhist(df, 'mj1j2', ';m_{j1 j2}' , 60,0,600))
+    futures.append(mkhist(df, 'mj1j2', ';m_{j1 j2}' , 60,0,1200))
+    futures.append(mkhist(df, 'mj1j2', ';m_{j1 j2}' , 60,0,1200))
 
     # Histograms by channel
     for fs in FinalState:
@@ -174,10 +196,10 @@ def analyze(df, args):
         fsname = fs.name.replace('fs','')
         fstitle= fsname.replace('mu','#mu').strip()
         futures.append(mkhist(df_ch, 'ZZ_mass_%s'%(fsname), ';m_{ZZ} [GeV], %s'%(fstitle), 60,0,600, v='ZZ_mass'))
-        for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
-            futures.append(mkhist(df_ch, '%s_pt_%s' %(Zxlx, fsname), ';%s p_{T} [GeV], %s'%(Zxlx, fstitle), 60,0,600, v='%s_pt'     %(Zxlx)))
-            futures.append(mkhist(df_ch, '%s_eta_%s'%(Zxlx, fsname), ';%s #eta, %s'       %(Zxlx, fstitle), 60,-3,3., v='%s_eta'    %(Zxlx)))
-            futures.append(mkhist(df_ch, '%s_phi_%s'%(Zxlx, fsname), ';%s #phi/#pi, %s'   %(Zxlx, fstitle), 50,-1,1., v='%s_phinorm'%(Zxlx)))
+        # for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
+        #     futures.append(mkhist(df_ch, '%s_pt_%s' %(Zxlx, fsname), ';%s p_{T} [GeV], %s'%(Zxlx, fstitle), 60,0,600, v='%s_pt'     %(Zxlx)))
+        #     futures.append(mkhist(df_ch, '%s_eta_%s'%(Zxlx, fsname), ';%s #eta, %s'       %(Zxlx, fstitle), 60,-3,3., v='%s_eta'    %(Zxlx)))
+        #     futures.append(mkhist(df_ch, '%s_phi_%s'%(Zxlx, fsname), ';%s #phi/#pi, %s'   %(Zxlx, fstitle), 50,-1,1., v='%s_phinorm'%(Zxlx)))
 
     # MELA probabilities (automatic from the branch names)
     branches = [str(b) for b in df.GetColumnNames()]
@@ -221,9 +243,9 @@ def analyze(df, args):
 def fix_xlabels_FSLFO(h):
     xaxis = h.GetXaxis()
     xaxis.SetBinLabel(1, '4e')
-    xaxis.SetBinLabel(2, '2e2#mu')
-    xaxis.SetBinLabel(3, '2#mu2e')
-    xaxis.SetBinLabel(4, '4#mu')
+    xaxis.SetBinLabel(2, '4#mu')
+    xaxis.SetBinLabel(3, '2e#2#mu')
+    xaxis.SetBinLabel(4, '2#mu2e')
 
 
 if __name__ == '__main__':
