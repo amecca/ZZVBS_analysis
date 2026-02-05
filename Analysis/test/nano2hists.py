@@ -12,6 +12,7 @@ import sys
 from argparse import ArgumentParser, Namespace
 import logging
 from time import time
+import math
 
 import ROOT
 
@@ -124,6 +125,12 @@ def analyze(df, args):
     df = df.Define('Z1flav', 'ZZCand_Z1flav[bestCandIdx]')
     df = df.Define('Z2flav', 'ZZCand_Z2flav[bestCandIdx]')
     df = df.Define('FSLFO', 'get_FSLFO(Z1flav, Z2flav)') # Final State, Lepton Flavour Order (ie 2e2mu != 2mu2e)
+    for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
+        df = df.Define(Zxlx+'_idx', 'ZZCand_%sIdx[bestCandIdx]' %(Zxlx))
+        df = df.Define(Zxlx+'_pt' , 'Lepton_pt[%s_idx]'  %(Zxlx))
+        df = df.Define(Zxlx+'_eta', 'Lepton_eta[%s_idx]' %(Zxlx))
+        df = df.Define(Zxlx+'_phi', 'Lepton_phi[%s_idx]' %(Zxlx))
+        df = df.Define(Zxlx+'_phinorm', Zxlx+'_phi/%f' %(math.pi))
 
     # Selection
     df = df.Filter(*['ZZ_mass > 100']*2)
@@ -143,6 +150,10 @@ def analyze(df, args):
         fsname = fs.name.replace('fs','')
         fstitle= fsname.replace('mu','#mu').strip()
         futures.append(mkhist(df_ch, 'ZZ_mass_%s'%(fsname), ';m_{ZZ} [GeV], %s'%(fstitle), 60,0,600, v='ZZ_mass'))
+        for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
+            futures.append(mkhist(df_ch, '%s_pt_%s' %(Zxlx, fsname), ';%s p_{T} [GeV], %s'%(Zxlx, fstitle), 60,0,600, v='%s_pt'     %(Zxlx)))
+            futures.append(mkhist(df_ch, '%s_eta_%s'%(Zxlx, fsname), ';%s #eta, %s'       %(Zxlx, fstitle), 60,-3,3., v='%s_eta'    %(Zxlx)))
+            futures.append(mkhist(df_ch, '%s_phi_%s'%(Zxlx, fsname), ';%s #phi/#pi, %s'   %(Zxlx, fstitle), 50,-1,1., v='%s_phinorm'%(Zxlx)))
 
     # MELA probabilities (automatic from the branch names)
     branches = [str(b) for b in df.GetColumnNames()]
