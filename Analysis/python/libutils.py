@@ -18,7 +18,7 @@ def find_lib(name, libdir='../lib'):
         if(os.path.exists(p)):
             break
     else:
-        raise FileNotFoundError('Could not .so named "%s" in "%s"', name, libdir)
+        raise FileNotFoundError('Could not find .so named "%s" in "%s"', name, libdir)
     return p
 
 
