@@ -51,11 +51,15 @@ def plot_compare(key:str, sample1:SampleHandle, sample2:SampleHandle, **kwargs):
 
     h1 = sample1.get_hist(key)
     h2 = sample2.get_hist(key)
+    h1.Scale(kwargs.get('scale1', 1.))
+    h2.Scale(kwargs.get('scale2', 1.))
     v1, e1 = TH1_integr_and_err(h1) if h1 is not None else (0, 0)
     v2, e2 = TH1_integr_and_err(h2) if h2 is not None else (0, 0)
     logging.debug('  1: %+.2f +- %.2f evts (%s)', v1, e1, sample1.title)
     logging.debug('  2: %+.2f +- %.2f evts (%s)', v2, e2, sample2.title)
-    logging.debug(' ->: %+.1f +- %.1f %%', 100*(v2/v1-1), 100*sqrt( ((v1**2 * e2**2) + (v2**2 * e1**2))/v1**4 ))
+    fr_diff_v = v2/v1-1 if v1 != 0 else float('nan')
+    fr_diff_e = sqrt( ((v1**2 * e2**2) + (v2**2 * e1**2))/v1**4 ) if v1 != 0 else float('nan')
+    logging.debug(' ->: %+.1f +- %.1f %%', 100*fr_diff_v, 100*fr_diff_e)
     if(not (h1 and h2)): return None
 
     h1.SetTitle(sample1.title)
@@ -122,6 +126,8 @@ def parse_args():
     parser.add_argument(      '--title1', default='Sample 1', help='Label in the legend (default: %(default)s)')
     parser.add_argument(      '--title2', default='Sample 2', help='Label in the legend (default: %(default)s)')
     parser.add_argument(      '--title-r',default='2/1'     , help='Y axis label in the ratio plot (default: %(default)s)')
+    parser.add_argument(      '--scale1', default=1., type=float, help='global k-factor for sample 1')
+    parser.add_argument(      '--scale2', default=1., type=float, help='global k-factor for sample 2')
     parser.add_argument('-o', '--outdir', default='comparesamples', metavar='DIR', help='Directory where plots will be saved. Default: %(default)s')
     parser.add_argument('-y', '--year', default='2022EE', help='Used to get lumi information')
     parser.add_argument('--log', dest='loglevel', metavar='LEVEL', default='WARNING', help='Level for the python logging module. Can be either a mnemonic string like DEBUG, INFO or WARNING or an integer (lower means more verbose).')
