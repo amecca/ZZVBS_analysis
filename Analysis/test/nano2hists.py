@@ -41,6 +41,7 @@ def main(args):
     # Load shared libraries
     ROOT.gInterpreter.AddIncludePath('../interface')
     find_load_lib('cConstants')
+    find_load_lib('helpers')
 
     # Run the analysis
     t_start = time()
@@ -122,15 +123,37 @@ def analyze(df, args):
     df = df.Define('j1_eta', 'Jet_eta[JetLeadingIdx]')
     df = df.Define('j2_eta', 'Jet_eta[JetSubleadingIdx]')
     df = df.Define('absdetajj', 'fabs(j1_eta-j2_eta)')
+
+    # Final State, Lepton Flavour Order (ie 2e2mu != 2mu2e)
     df = df.Define('Z1flav', 'ZZCand_Z1flav[bestCandIdx]')
     df = df.Define('Z2flav', 'ZZCand_Z2flav[bestCandIdx]')
-    df = df.Define('FSLFO', 'get_FSLFO(Z1flav, Z2flav)') # Final State, Lepton Flavour Order (ie 2e2mu != 2mu2e)
+    df = df.Define('FSLFO', 'get_FSLFO(Z1flav, Z2flav)')
     for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
         df = df.Define(Zxlx+'_idx', 'ZZCand_%sIdx[bestCandIdx]' %(Zxlx))
         df = df.Define(Zxlx+'_pt' , 'Lepton_pt[%s_idx]'  %(Zxlx))
         df = df.Define(Zxlx+'_eta', 'Lepton_eta[%s_idx]' %(Zxlx))
         df = df.Define(Zxlx+'_phi', 'Lepton_phi[%s_idx]' %(Zxlx))
         df = df.Define(Zxlx+'_phinorm', Zxlx+'_phi/%f' %(math.pi))
+
+    df = df.Define('ZZ_Lepton_idx', 'ROOT::RVecI {'+
+                   ','.join([ '%s_idx' %(Zxlx) for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2')])
+                   +'}')
+    df = df.Define('ZZ_Lepton_pt', 'fill_with_indexes(Lepton_pt, ZZ_Lepton_idx)')
+
+    df = df.Define('ZZ_Muon_idx', 'filter_abs_pdgId(ZZ_Lepton_idx, Lepton_pdgId, 13)')
+    df = df.Define('ZZ_Muon_pt', 'fill_with_indexes(Lepton_pt, ZZ_Muon_idx)')
+    df = df.Define('ZZ_leadingMu_pt', 'ZZ_Muon_pt.size() > 0 ? ZZ_Muon_pt[0] : -1.')
+    df = df.Define('ZZ_subleadMu_pt', 'ZZ_Muon_pt.size() > 1 ? ZZ_Muon_pt[1] : -1.')
+    futures.append(mkhist(df, 'ZZ_leadingMu_pt', ';leading #mu p_{T} [GeV]', 60,0,600))
+    futures.append(mkhist(df, 'ZZ_subleadMu_pt', ';sublead #mu p_{T} [GeV]', 60,0,600))
+
+    # mjj
+    kinj1 = ['Jet_%s[JetLeadingIdx]'   %(var) for var in ('pt', 'eta', 'phi', 'mass')]
+    kinj2 = ['Jet_%s[JetSubleadingIdx]'%(var) for var in ('pt', 'eta', 'phi', 'mass')]
+    df = df.Define('mj1j2' , 'sum_M_mass(' + ', '.join(kinj1 + kinj2) + ')')
+
+    # inclusive histograms
+    futures.append(mkhist(df, 'incl_nJets', ';# jets', 10,-0.5,9.5, v='nJet'))
 
     # Selection
     df = df.Filter(*['ZZ_mass > 100']*2)
@@ -142,6 +165,7 @@ def analyze(df, args):
     futures.append(mkhist(df, 'ZZ_KD'  , ';KD', 50,0,1))
     futures.append(mkhist(df, 'absdetajj', ';|#Delta #eta_{jj}|', 60,0,6))
     futures.append(mkhist(df, 'FSLFO', ';Final state', 4,0,4))
+    futures.append(mkhist(df, 'mj1j2', ';m_{j1 j2}' , 60,0,600))
 
     # Histograms by channel
     for fs in FinalState:

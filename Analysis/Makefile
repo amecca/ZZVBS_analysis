@@ -1,9 +1,9 @@
 CFLAGS   = -Iinterface -Wall -Werror -g -O1 -fno-omit-frame-pointer -lmath -fpic
 CXXFLAGS = $(CFLAGS) $(shell root-config --cflags) -I$(shell root-config --incdir)
 LDFLAGS  = -g -I. -Iinterface $(shell root-config --cflags)
-CLINGFLAGS= -f -Iinterface -I$(root-config --incdir) -rml --failOnWarnings -D__ACLIC__
+CLINGFLAGS= -f -Iinterface -I$(shell root-config --incdir) -rml --failOnWarnings -D__ACLIC__
 VPATH ::= ./src ./interface
-LIBS ::= cConstants_cpp.so FakeRates_cpp.so
+LIBS ::= cConstants_cpp.so FakeRates_cpp.so helpers_cpp.so
 LIBPATHS ::= $(patsubst %,lib/%,$(LIBS))
 
 ### Main target
