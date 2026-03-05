@@ -86,8 +86,14 @@ def plot_compare(key:str, sample1:SampleHandle, sample2:SampleHandle, **kwargs):
     # for n in range(h1.GetNbinsX()): logging.debug('  %2d: (%.3g, %.3g)', n, h1.GetXaxis().GetBinCenter(n), h1.GetBinContent(n))
     # logging.debug('ratio (%d):', ratio.GetN())
     # for n in range(ratio.GetN())  : logging.debug('  %2d: (%.3g, %.3g)', n, ratio.GetPointX(n), ratio.GetPointY(n))
+    if(kwargs.get('logy', False)):
+        y_scale = 10
+        y_min = 1e-2
+    else:
+        y_scale = 1.5
+        y_min = 0
 
-    dicanvas_kwargs = dict(y_min=0, y_scale=1.7, min_hi_r=1.1, max_lo_r=0.9, range_include_err=True,
+    dicanvas_kwargs = dict(y_min=y_min, y_scale=y_scale, min_hi_r=1.1, max_lo_r=0.9, range_include_err=True,
                            max_hi_r=1.2, min_lo_r=0.8,
                            iPos=11)
     canvas = cmsDiCanvas_fromTH1(key, h1, ratio,
@@ -95,7 +101,7 @@ def plot_compare(key:str, sample1:SampleHandle, sample2:SampleHandle, **kwargs):
 
     ### Upper pad ###
     canvas.cd(1)
-    # canvas.GetPad(1).SetLogy()
+    canvas.GetPad(1).SetLogy(kwargs.get('logy', False))
 
     # The legend needs to be created after the canvas, otherwise it won't be drawn
     leg_ymax = .875
