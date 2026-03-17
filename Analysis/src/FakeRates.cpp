@@ -4,15 +4,15 @@
 #include "FakeRates.hpp"
 
 // Helper
-TH1F* _h_from_tge(const TGraphErrors&);
+TH1F* _h_from_tge(const TGraphErrors&, bool debug);
 
 
 // Constructor
 //===============================================
-FakeRates::FakeRates(const TString& input_file_FR_name)
-  : is_init(false)
+FakeRates::FakeRates(const char *input_file_FR_name, const char *method, bool debug)
+  : _is_init(false), _debug(debug)
 {
-  init(input_file_FR_name);
+  init(input_file_FR_name, method);
 }
 
 
@@ -20,7 +20,7 @@ FakeRates::~FakeRates(){}
 
 
 // Inititalization
-void FakeRates::init(const TString& input_file_FR_name){
+void FakeRates::init(const char *input_file_FR_name, const char *method){
   auto input_file_FR = TFile::Open(input_file_FR_name);
   if(!input_file_FR->IsOpen()){
     fprintf(stderr, "ERROR FakeRates: cannot open \"%s\"\n", input_file_FR->GetName());
@@ -29,20 +29,25 @@ void FakeRates::init(const TString& input_file_FR_name){
   }
 
   // for Christophe's FR files
-  auto g_m_EB = (TGraphErrors*)input_file_FR->Get("FR_SS_muon_EB");
-  auto g_m_EE = (TGraphErrors*)input_file_FR->Get("FR_SS_muon_EE");
-  auto g_e_EB = (TGraphErrors*)input_file_FR->Get("FR_SS_electron_EB");
-  auto g_e_EE = (TGraphErrors*)input_file_FR->Get("FR_SS_electron_EE");
+  auto g_m_EB = (TGraphErrors*)input_file_FR->Get(Form("FR_%s_muon_EB"    , method));
+  auto g_m_EE = (TGraphErrors*)input_file_FR->Get(Form("FR_%s_muon_EE"    , method));
+  auto g_e_EB = (TGraphErrors*)input_file_FR->Get(Form("FR_%s_electron_EB", method));
+  auto g_e_EE = (TGraphErrors*)input_file_FR->Get(Form("FR_%s_electron_EE", method));
 
-  h_m_EB = _h_from_tge(*g_m_EB);
-  h_m_EE = _h_from_tge(*g_m_EE);
-  h_e_EB = _h_from_tge(*g_e_EB);
-  h_e_EE = _h_from_tge(*g_e_EE);
+  if(g_m_EB == nullptr){ fprintf(stderr, "ERROR:%s:%s: could not get TGE for muon EB\n"    , __FILE__, __func__); return; }
+  if(g_m_EE == nullptr){ fprintf(stderr, "ERROR:%s:%s: could not get TGE for muon EE\n"    , __FILE__, __func__); return; }
+  if(g_e_EB == nullptr){ fprintf(stderr, "ERROR:%s:%s: could not get TGE for electron EB\n", __FILE__, __func__); return; }
+  if(g_e_EE == nullptr){ fprintf(stderr, "ERROR:%s:%s: could not get TGE for electron EE\n", __FILE__, __func__); return; }
+
+  h_m_EB = _h_from_tge(*g_m_EB, _debug);
+  h_m_EE = _h_from_tge(*g_m_EE, _debug);
+  h_e_EB = _h_from_tge(*g_e_EB, _debug);
+  h_e_EE = _h_from_tge(*g_e_EE, _debug);
 
   input_file_FR->Close();
   delete input_file_FR;
 
-  is_init = true;
+  _is_init = true;
 }
 //===============================================
 
@@ -70,7 +75,7 @@ std::pair<float, float> FakeRates::getFR(float pt, float eta, int id) const{
 
 const TH1F* FakeRates::get_hist(float eta, int id) const{
   TH1F* h = nullptr;
-  if(!is_init) return h;
+  if(!_is_init) return h;
   unsigned int aid = abs(id);
   float aeta = fabs(eta);
 
@@ -88,14 +93,15 @@ const TH1F* FakeRates::get_hist(float eta, int id) const{
 }
 
 
-TH1F* _h_from_tge(const TGraphErrors& g){
+TH1F* _h_from_tge(const TGraphErrors& g, bool debug){
   /* Helper function that creates a TH1F based on a TGraphErrors,
    with N+1 bins and the correct bin content and error*/
   int n = g.GetN();
   std::vector<float> edges;  edges .reserve(n+1);
   std::vector<float> values; values.reserve(n+1);
   std::vector<float> errors; errors.reserve(n+1);
-  fprintf(stderr, "DEBUG (h_from_tge): converting %s (%d points)\n", g.GetName(), n);
+  if(debug)
+    fprintf(stderr, "DEBUG (h_from_tge): converting %s (%d points)\n", g.GetName(), n);
 
   for(int i=0; i<n; ++i){
     float px = g.GetPointX(i);
@@ -133,6 +139,7 @@ TH1F* _h_from_tge(const TGraphErrors& g){
   h.SetBinContent(n+1, values.back());
   h.SetBinError  (n+1, errors.back());
 
-  fprintf(stderr, "DEBUG (h_from_tge): returning new TH1F 0x%p (%i bins)\n", hp, hp->GetNbinsX());
+  if(debug)
+    fprintf(stderr, "DEBUG (h_from_tge): returning new TH1F 0x%p (%i bins)\n", hp, hp->GetNbinsX());
   return hp;
 }
