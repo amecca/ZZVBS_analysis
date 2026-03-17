@@ -5,9 +5,11 @@ CLINGFLAGS= -f -Iinterface -I$(shell root-config --incdir) -rml --failOnWarnings
 VPATH ::= ./src ./interface
 LIBS ::= cConstants_cpp.so FakeRates_cpp.so helpers_cpp.so
 LIBPATHS ::= $(patsubst %,lib/%,$(LIBS))
+DICT_SRCS ::= $(patsubst, %_cpp.so,%_cpp_ACLiC_dict.cxx,$(LIBPATHS))
+DICT_OBJS ::= $(patsubst, %.cxx,%,$(DICT_SRCS))
 
 ### Main target
-default: $(LIBPATHS)
+default: $(DICT_OBJS) $(LIBPATHS)
 .PHONY: default
 
 ### Do not try to remake sources
@@ -18,6 +20,9 @@ Makefile:;
 # C++ headers and sources
 %.hpp:;
 %.cpp:;
+
+# secondary: never deleted, need not be rebuilt
+.SECONDARY: $(DICT_SRCS)
 
 ### Build rules
 # C object files
@@ -30,13 +35,11 @@ lib/%_c.so: bin/%_c.o | lib
 	$(CC) -rdynamic -shared $< -o $@
 
 # ROOT C++ shared libraries with dictionary
-lib/%_cpp_ACLiC_dict.cxx: src/%.cpp interface/%.hpp src/LinkDef.h | lib
+lib/%_cpp_ACLiC_dict.cxx lib/%_cpp_ACLiC_dict_rdict.pcm &: src/%.cpp interface/%.hpp src/LinkDef.h | lib
 	rootcling $(CLINGFLAGS) $@ $^
-.NOTINTERMEDIATE: lib/FakeRates_cpp_ACLiC_dict.cxx
 
 lib/%_cpp_ACLiC_dict: lib/%_cpp_ACLiC_dict.cxx
 	$(CXX) -I. $(CXXFLAGS) -c $< -o $@
-.NOTINTERMEDIATE: lib/FakeRates_cpp_ACLiC_dict
 
 lib/%_cpp.so: lib/%_cpp_ACLiC_dict | lib
 	$(CXX) -rdynamic -shared $< -o $@
