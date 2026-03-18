@@ -146,6 +146,7 @@ def parse_args():
     parser.add_argument(      '--scale1', default=1., type=float, help='global k-factor for sample 1')
     parser.add_argument(      '--scale2', default=1., type=float, help='global k-factor for sample 2')
     parser.add_argument(      '--norm'  , action='store_true', help='Normalize both 1 and 2 so that the integral is 1')
+    parser.add_argument(      '--logy'  , action='store_true')
     parser.add_argument('-o', '--outdir', default='comparesamples', metavar='DIR', help='Directory where plots will be saved. Default: %(default)s')
     parser.add_argument('-y', '--year', default='2022EE', help='Used to get lumi information')
     parser.add_argument('--log', dest='loglevel', metavar='LEVEL', default='WARNING', help='Level for the python logging module. Can be either a mnemonic string like DEBUG, INFO or WARNING or an integer (lower means more verbose).')
