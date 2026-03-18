@@ -96,6 +96,7 @@ def cmsDiCanvas_fromTH1(name, h, r, y_scale=1, range_include_err=False, **kwargs
     cmsargs['y_min'] = kwargs.get('y_min', h.GetMinimum())
     cmsargs['y_max'] = kwargs.get('y_max', h.GetMaximum()*y_scale)
 
+    r_min, r_max = 0, 2 # default values
     if(not ('r_min' in kwargs and 'r_max' in kwargs)):
         for argname in ('y_scale', 'min_lo', 'max_lo', 'min_hi', 'max_hi'):
             # massage arg names for clamp_expnd_r()
@@ -103,8 +104,7 @@ def cmsDiCanvas_fromTH1(name, h, r, y_scale=1, range_include_err=False, **kwargs
         if(r.GetN() > 0):
             r_min, r_max = get_range_tga(r, include_err=range_include_err)
             r_min, r_max = clamp_expnd_r(r_min, r_max, **kwargs)
-        else:
-            r_min, r_max = 0, 2
+
     r_min = kwargs.get('r_min', r_min)
     r_max = kwargs.get('r_max', r_max)
 
