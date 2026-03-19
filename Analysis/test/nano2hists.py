@@ -137,7 +137,7 @@ def analyze(df, args):
         df = df.Define(Zxlx+'_phi', 'Lepton_phi[%s_idx]' %(Zxlx))
         df = df.Define(Zxlx+'_phinorm', Zxlx+'_phi/%f' %(math.pi))
         futures.append(mkhist(df, '%s_pt' %(Zxlx),    ';%s p_{T} [GeV]'%(Zxlx), 60,0.,600., v='%s_pt'     %(Zxlx)))
-        futures.append(mkhist(df, '%s_eta'%(Zxlx),    ';%s #eta'       %(Zxlx), 0,-2.5,2.5, v='%s_eta'    %(Zxlx)))
+        futures.append(mkhist(df, '%s_eta'%(Zxlx),    ';%s #eta'       %(Zxlx), 50,-2.5,2.5,v='%s_eta'    %(Zxlx)))
         futures.append(mkhist(df, '%s_phinorm'%(Zxlx),';%s #phi/#pi'   %(Zxlx), 50,-1.,1. , v='%s_phinorm'%(Zxlx)))
 
 
@@ -184,9 +184,8 @@ def analyze(df, args):
     futures.append(mkhist(df, 'ZZ_KD'  , ';KD', 50,0,1))
     futures.append(mkhist(df, 'absdetajj', ';|#Delta #eta_{jj}|', 60,0,6))
     futures.append(mkhist(df, 'j1_pt', ';j1 p_{T} [GeV]', 60,0,600))
-    futures.append(mkhist(df, 'j2_pt', ';j1 p_{T} [GeV]', 60,0,600))
+    futures.append(mkhist(df, 'j2_pt', ';j2 p_{T} [GeV]', 60,0,600))
     futures.append(mkhist(df, 'FSLFO', ';Final state', 4,0,4))
-    futures.append(mkhist(df, 'mj1j2', ';m_{j1 j2}' , 60,0,1200))
     futures.append(mkhist(df, 'mj1j2', ';m_{j1 j2}' , 60,0,1200))
 
     # Histograms by channel
@@ -214,7 +213,7 @@ def analyze(df, args):
         if  (prob == 'JJVBF_BKG_MCFM_JECNominal'): title = 'EW'
         elif(prob == 'JJQCD_BKG_MCFM_JECNominal'): title = 'QCD'
         else: title = prob
-        futures.append(mkhist (df, 'MELA_'+prob       , ';P(%s)'     %(title), 50, 0 , 1, v=prob))
+        # futures.append(mkhist (df, 'MELA_'+prob       , ';P(%s)'     %(title), 50, 0 , 1, v=prob))
         futures.append(mkhist (df, 'MELA_'+prob+'_log', ';log(P(%s))'%(title), 50,-50, 0, v=prob+'_log'))
 
     # Mela ratio
