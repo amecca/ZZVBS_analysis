@@ -150,10 +150,6 @@ def analyze(df, args):
         df = df.Define(Zxlx+'_eta', 'Lepton_eta[%s_idx]' %(Zxlx))
         df = df.Define(Zxlx+'_phi', 'Lepton_phi[%s_idx]' %(Zxlx))
         df = df.Define(Zxlx+'_phinorm', Zxlx+'_phi/%f' %(math.pi))
-        futures.append(mkhist(df, '%s_pt' %(Zxlx),    ';%s p_{T} [GeV]'%(Zxlx), 60,0.,600., v='%s_pt'     %(Zxlx)))
-        futures.append(mkhist(df, '%s_eta'%(Zxlx),    ';%s #eta'       %(Zxlx), 50,-2.5,2.5,v='%s_eta'    %(Zxlx)))
-        futures.append(mkhist(df, '%s_phinorm'%(Zxlx),';%s #phi/#pi'   %(Zxlx), 50,-1.,1. , v='%s_phinorm'%(Zxlx)))
-
 
     df = df.Define('ZZ_Lepton_idx', 'ROOT::RVecI {'+
                    ','.join([ '%s_idx' %(Zxlx) for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2')])
@@ -181,19 +177,17 @@ def analyze(df, args):
     kinj2 = ['Jet_%s[JetSubleadingIdx]'%(var) for var in ('pt', 'eta', 'phi', 'mass')]
     df = df.Define('mj1j2' , 'sum_M_mass(' + ', '.join(kinj1 + kinj2) + ')')
 
-    # inclusive histograms
-    # df = df.Filter(*['ZZ_mass > 180']*2)
-    # df = df.Filter(*['ZZ_mass < 340']*2)
-    futures.append(mkhist(df, 'incl_nJets', ';# jets', 10,-0.5,9.5, v='nJet'))
+    ### Inclusive histograms
+    futures.append(mkhist(df, 'incl_nJets', ';# jets', 10,-0.5,9.5, v='nCleanedJetsPt30'))
 
-    # Selection
+    ### Selection
     # df = df.Filter(*['ZZ_mass > 100']*2)
     # df = df.Filter(*['ZZ_mass < 340']*2)
-    # df = df.Filter(*['nJet >= 2'    ]*2)
+    df = df.Filter(*['nCleanedJetsPt30 >= 2']*2)
     # df = df.Filter(*['absdetajj > 1']*2)
     # df = df.Filter(*['mj1j2 > 100']*2)
 
-    # Request some histograms
+    ### Histograms
     futures.append(mkhist(df, 'ZZ_mass', ';m_{ZZ} [GeV]', 60,0,600))
     futures.append(mkhist(df, 'ZZ_KD'  , ';KD', 50,0,1))
     futures.append(mkhist(df, 'absdetajj', ';|#Delta #eta_{jj}|', 60,0,6))
@@ -201,6 +195,12 @@ def analyze(df, args):
     futures.append(mkhist(df, 'j2_pt', ';j2 p_{T} [GeV]', 60,0,600))
     futures.append(mkhist(df, 'FSLFO', ';Final state', 4,0,4))
     futures.append(mkhist(df, 'mj1j2', ';m_{j1 j2}' , 60,0,1200))
+    futures.append(mkhist(df, 'nJets', ';# jets', 10,-0.5,9.5, v='nCleanedJetsPt30'))
+
+    for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
+        futures.append(mkhist(df, '%s_pt' %(Zxlx),    ';%s p_{T} [GeV]'%(Zxlx), 60,0.,600., v='%s_pt'     %(Zxlx)))
+        futures.append(mkhist(df, '%s_eta'%(Zxlx),    ';%s #eta'       %(Zxlx), 50,-2.5,2.5,v='%s_eta'    %(Zxlx)))
+        futures.append(mkhist(df, '%s_phinorm'%(Zxlx),';%s #phi/#pi'   %(Zxlx), 50,-1.,1. , v='%s_phinorm'%(Zxlx)))
 
     # Histograms by channel
     for fs in FinalState:
