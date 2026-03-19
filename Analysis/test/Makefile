@@ -7,9 +7,11 @@ HISTS_2022EE ::= $(patsubst %,hists/2022EE/%.root,$(SAMPLES_2022EE))
 #/eos/user/p/psalvini/MARIO_TAMI/ZZVBS_Analysis/muonMVA
 NTUPLE_DIR     ::= ntuples
 SAMPLES_2024   ::= ZZTo4l_2Jets_EW ZZTo4l_2Jets_EW_QCD ZZTo4l_2Jets_QCD ZZ4Ljj_EWK_LL ZZ4Ljj_EWK_LT ZZ4Ljj_EWK_TT gg4l_POWHEG ggTo2e2mu_Contin_MCFM701 #ggTo4e_Contin_MCFM701 ggTo4m
+DATASETS_2024  ::= EGamma0 EGamma1 Muon0 Muon1 MuonEG
 
 DIRS ::= \
   hists $(patsubst %,hists/%,2022EE 2024) \
+  hists_data $(patsubst %,hists_data/%,2022EE 2024) \
   hists_cut hists_cut/2024 compare_muID compare_muID/2024 \
   hists_pol hists_pol/2024 compare_pol compare_pol/2024 \
 
@@ -21,23 +23,30 @@ all: $(HISTS_2024_gg2e2muPOWHEG) #$(HISTS_2024) # compareplots/2023postBPix/.tim
 .SUFFIXES:
 Makefile:;
 %.timestamp:;
+ntuples/%:;
+ntuples_data/%:;
 
 .SECONDARY:
 
 ### Recipes
 
 hists/2023postBPix/%_Chunk0.root: ntuples/2023postBPix/%_Chunk0/ZZ4lAnalysis.root nano2hists.py
-	./nano2hists.py --log $(LOGLEVEL) -o $@ $<
+	./nano2hists.py --MC --log $(LOGLEVEL) -o $@ $<
 
 hists/2022EE/%.root: ntuples/2022EE/%/ZZ4lAnalysis.root nano2hists.py
-	./nano2hists.py --log $(LOGLEVEL) -o $@ $<
+	./nano2hists.py --MC --log $(LOGLEVEL) -o $@ $<
 
 hists/2022EE/.timestamp: $(HISTS_2022EE)
 
 hists/2024/%.root: nano2hists.py $(NTUPLE_DIR)/2024/%_Chunk*/ZZ4lAnalysis.root | hists/2024
-	./$< --log $(LOGLEVEL) -o $@ $(wordlist 2,$(words $^),$^)
+	./$< --log $(LOGLEVEL) -o $@ --MC   $(wordlist 2,$(words $^),$^)
 hists_cut/2024/%.root: nano2hists.py /eos/user/a/amecca/samples/ZZVBS_Analysis/muonCUT/2024/%_Chunk*/ZZ4lAnalysis.root | hists_cut/2024
-	./$< --log $(LOGLEVEL) -o $@ $(wordlist 2,$(words $^),$^)
+	./$< --log $(LOGLEVEL) -o $@ --MC   $(wordlist 2,$(words $^),$^)
+hists_data/2024/%.root: nano2hists.py ntuples_data/2024/%2024*_Chunk*/ZZ4lAnalysis.root | hists_data/2024
+	./$< --log $(LOGLEVEL) -o $@ --data $(wordlist 2,$(words $^),$^)
+
+hists/2024/data.root: $(patsubst %,hists_data/2024/%.root,$(DATASETS_2024))
+	hadd -f --ff $@ $^
 
 $(DIRS):
 	mkdir -p $@
@@ -69,7 +78,6 @@ compare_gg4l/2024/.timestamp: compare_samples.py hists/2024/ggTo2e2mu_Contin_MCF
 	-1 $(word 2,$^) \
 	-2 $(word 3,$^) \
 	--logy \
-	--norm \
 	--title1 "gg #rightarrow 2e2#mu MCFM" --title2 "gg #rightarrow 2e2#mu POWHEG" --title-r "POW/MCFM"
 	touch $@
 

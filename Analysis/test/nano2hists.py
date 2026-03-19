@@ -43,6 +43,15 @@ def main(args):
     find_load_lib('cConstants')
     find_load_lib('helpers')
 
+    # Are we running on MC or data? Compute the weights
+    if(args.is_MC):
+        df_runs = ROOT.RDataFrame('Runs', args.fnames_in)
+        genEventSumw = df_runs.Sum('genEventSumw').GetValue()
+        logging.info('genEventSumw: %g', genEventSumw)
+        df = df.Define('weight', 'overallEventWeight * ZZCand_dataMCWeight[bestCandIdx]/%f' %(genEventSumw))
+    else:
+        df = df.Define('weight', '1')
+
     # Run the analysis
     t_start = time()
     histograms = analyze(df, args)
@@ -92,6 +101,12 @@ def parse_args():
     parser.add_argument('-n', '--max-entries', type=int, default=0, metavar='N', help='Process a maximum of N entries (disables multithreading)')
     # parser.add_argument(      '--mt'   , dest='multithread', action='store_true' , help='Enable ROOT implicit multithread (default)', default=True)
     parser.add_argument(      '--no-mt', dest='multithread', action='store_false', help='Disable ROOT implicit multithread (output entries will not be ordered)')
+
+    # Data/MC? -> 12. In the face of ambiguity, refuse the temptation to guess.
+    pgisMC = parser.add_mutually_exclusive_group(required=True)
+    pgisMC.add_argument(      '--data', dest='is_MC', action='store_false', help='Set the event weights to 1')
+    pgisMC.add_argument(      '--MC'  , dest='is_MC', action='store_true' , help='Compute the event weights')
+
     parser.add_argument('--log', dest='loglevel', metavar='LEVEL', default='WARNING', help='Level for the python logging module. Can be either a mnemonic string like DEBUG, INFO or WARNING or an integer (lower means more verbose).')
     args = parser.parse_args()
 
@@ -116,8 +131,7 @@ def analyze(df, args):
     futures = [] # <ROOT.RDF.RResultPtr>
     histograms = [] # <ROOT.TH1F>
 
-    # Aliases
-    df = df.Alias('weight', 'overallEventWeight')
+    ### Aliases and definitions
     df = df.Define('ZZ_mass', 'ZZCand_mass[bestCandIdx]')
     df = df.Define('ZZ_KD'  , 'ZZCand_KD[bestCandIdx]')
     df = df.Define('j1_pt' , 'Jet_pt[JetLeadingIdx]')
