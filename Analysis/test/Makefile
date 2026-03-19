@@ -92,6 +92,7 @@ compare_gg4l/2024/.timestamp: compare_samples.py $(HISTS_2024_gg2e2muMCFM) $(HIS
 	./compare_samples.py -o $(@D) -y 2024 --log $(LOGLEVEL) \
 	-1 hists/2024/ggTo2e2mu_Contin_MCFM701_Chunk*.root \
 	-2 hists/2024/gg4l_POWHEG_Chunk*.root \
+	--logy \
 	--norm \
 	--title1 "gg #rightarrow 2e2#mu MCFM" --title2 "gg #rightarrow 2e2#mu POWHEG" --title-r "POW/MCFM"
 	touch $@
