@@ -32,7 +32,7 @@ def main(args):
     df = ROOT.RDataFrame(
         'Events'
         # 'ZZTree/candTree'
-        , args.fname_in)
+        , args.fnames_in)
 
     if(args.list_columns):
         print(df.Describe())
@@ -86,7 +86,7 @@ def parse_args():
     parser = ArgumentParser('Run the VBS ZZjj analysis on a NanoAOD file from ZZ (Run 3)',
                             epilog='outputs ROOT files with histograms. For efficiency, '
                             'the fancy plot formatting is in a separate step')
-    parser.add_argument('fname_in', metavar='FILE', help='Input: (post-processed) NanoAOD file')
+    parser.add_argument('fnames_in', nargs='+', metavar='FILE', help='Input: (post-processed) NanoAOD files')
     parser.add_argument('-o', '--output', default=None, dest='fname_out', metavar='FILE', help='Default: %(default)s')
     parser.add_argument(      '--list', dest='list_columns', action='store_true', help='List the columns present in the input file and exit')
     parser.add_argument('-n', '--max-entries', type=int, default=0, metavar='N', help='Process a maximum of N entries (disables multithreading)')
@@ -98,7 +98,7 @@ def parse_args():
     if(args.max_entries > 0):
         args.multithread = False
     if(args.fname_out is None):
-        split = os.path.splitext(args.fname_in)
+        split = os.path.splitext(args.fnames_in[0])
         args.fname_out = split[0]+'_hists' + split[1]
 
     return args
