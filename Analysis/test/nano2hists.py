@@ -163,14 +163,15 @@ def analyze(df, args):
     df = df.Define('ZZ_subleadMu_pt', 'ZZ_Muon_pt.size() > 1 ? ZZ_Muon_pt[1] : -1.')
     df = df.Define('ZZ_leadingMu_eta', 'ZZ_Muon_eta.size() > 0 ? ZZ_Muon_eta[0] : -100.')
     df = df.Define('ZZ_subleadMu_eta', 'ZZ_Muon_eta.size() > 1 ? ZZ_Muon_eta[1] : -100.')
-    # df = df.Define('ZZ_Muon_idxMuon', )
-    df = df.Define('lastMu_lowPtMVA', '*std::min_element(Muon_mvaLowPt.begin(), Muon_mvaLowPt.end())')
+    df = df.Define('ZZ_Muon_idxMuon' , 'ZZ_Muon_idx - nElectron')
+    df = df.Define('ZZ_Muon_mvaLowPt', 'fill_with_indexes(Muon_mvaLowPt, ZZ_Muon_idxMuon)')
+    df = df.Define('ZZ_Muon_minmvaLowPt', 'ZZ_Muon_mvaLowPt.size() > 0? *std::min_element(ZZ_Muon_mvaLowPt.begin(), ZZ_Muon_mvaLowPt.end()) : 1.')
 
     futures.append(mkhist(df, 'ZZ_leadingMu_pt', ';leading #mu p_{T} [GeV]', 60,0.,300.))
     futures.append(mkhist(df, 'ZZ_subleadMu_pt', ';sublead #mu p_{T} [GeV]', 60,0.,300.))
     futures.append(mkhist(df, 'ZZ_leadingMu_eta', ';leading #mu #eta'      , 50,-2.5,2.5))
     futures.append(mkhist(df, 'ZZ_subleadMu_eta', ';sublead #mu #eta'      , 50,-2.5,2.5))
-    futures.append(mkhist(df, 'lastMu_lowPtMVA', ';min(#mu MVA)'           , 40,-1.,1.))
+    futures.append(mkhist(df, 'ZZ_Muon_minmvaLowPt', ';min(#mu MVA)'       , 40,-1.,1.))
 
     # mjj
     kinj1 = ['Jet_%s[JetLeadingIdx]'   %(var) for var in ('pt', 'eta', 'phi', 'mass')]
@@ -190,7 +191,7 @@ def analyze(df, args):
     ### Histograms
     futures.append(mkhist(df, 'ZZ_mass', ';m_{ZZ} [GeV]', 60,0,600))
     futures.append(mkhist(df, 'ZZ_KD'  , ';KD', 50,0,1))
-    futures.append(mkhist(df, 'absdetajj', ';|#Delta #eta_{jj}|', 60,0,6))
+    futures.append(mkhist(df, 'absdetajj', ';|#Delta #eta_{jj}|', 80,0,8))
     futures.append(mkhist(df, 'j1_pt', ';j1 p_{T} [GeV]', 60,0,600))
     futures.append(mkhist(df, 'j2_pt', ';j2 p_{T} [GeV]', 60,0,600))
     futures.append(mkhist(df, 'FSLFO', ';Final state', 4,0,4))
