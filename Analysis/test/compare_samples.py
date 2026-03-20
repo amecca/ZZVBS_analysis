@@ -59,9 +59,11 @@ def plot_compare(key:str, sample1:SampleHandle, sample2:SampleHandle, **kwargs):
     if(kwargs.get('norm', False)):
         h1.Scale(1./h1.Integral(0,-1))
         h2.Scale(1./h2.Integral(0,-1))
+        h1.GetYaxis().SetTitle('a.u.')
     else:
         h1.Scale(kwargs.get('scale1', 1.))
         h2.Scale(kwargs.get('scale2', 1.))
+        h1.GetYaxis().SetTitle('Events')
 
     v1, e1 = TH1_integr_and_err(h1) if h1 is not None else (0, 0)
     v2, e2 = TH1_integr_and_err(h2) if h2 is not None else (0, 0)
