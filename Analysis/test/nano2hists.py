@@ -185,7 +185,7 @@ def analyze(df, args):
     # df = df.Filter(*['ZZ_mass < 340']*2)
     df = df.Filter(*['nCleanedJetsPt30 >= 2']*2)
     # df = df.Filter(*['absdetajj > 1']*2)
-    # df = df.Filter(*['mj1j2 > 100']*2)
+    df = df.Filter(*['mj1j2 > 120']*2)
 
     ### Histograms
     futures.append(mkhist(df, 'ZZ_mass', ';m_{ZZ} [GeV]', 60,0,600))
