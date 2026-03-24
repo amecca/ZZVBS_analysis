@@ -14,12 +14,15 @@ class VarInfo:
       only mll_prompt from sampleA and mll_prompt+mll_nonprompt from sampleB
     * ytitle: title of the y axis (default: Events)
     '''
-    def __init__(self, name: str, xtitle: str,
-                 ytitle: str="Events", logy: bool=False):
+    def __init__(self, name: str, xtitle: str=None,
+                 ytitle: str="Events", logy: bool=False,
+                 blind: bool=False,
+                 ):
         self.name = name
         self.xtitle = xtitle
         self.ytitle = ytitle
         self.logy = logy
+        self.blind = blind
 
 
 class SampleInfo:
