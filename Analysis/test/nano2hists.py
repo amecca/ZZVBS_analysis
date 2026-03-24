@@ -18,7 +18,7 @@ import ROOT
 
 from ZZAnalysis.NanoAnalysis.tools import setConf
 
-from ZZVBS_analysis.Analysis.utils import TFileContext, mkhist, FinalState
+from ZZVBS_analysis.Analysis.utils import TFileContext, mkhist, FinalState, lumi_dict
 from ZZVBS_analysis.Analysis.libutils import find_load_lib
 
 
@@ -48,7 +48,8 @@ def main(args):
         df_runs = ROOT.RDataFrame('Runs', args.fnames_in)
         genEventSumw = df_runs.Sum('genEventSumw').GetValue()
         logging.info('genEventSumw: %g', genEventSumw)
-        df = df.Define('weight', 'overallEventWeight * ZZCand_dataMCWeight[bestCandIdx]/%f' %(genEventSumw))
+        lumi = lumi_dict[args.year]['value']
+        df = df.Define('weight', 'overallEventWeight * ZZCand_dataMCWeight[bestCandIdx] * %f' %(lumi/genEventSumw))
     else:
         df = df.Define('weight', '1')
 
@@ -97,6 +98,7 @@ def parse_args():
                             'the fancy plot formatting is in a separate step')
     parser.add_argument('fnames_in', nargs='+', metavar='FILE', help='Input: (post-processed) NanoAOD files')
     parser.add_argument('-o', '--output', default=None, dest='fname_out', metavar='FILE', help='Default: %(default)s')
+    parser.add_argument('-y', '--year'  , required=True, metavar='YEAR', help='Needed to get the correct luminosity')
     parser.add_argument(      '--list', dest='list_columns', action='store_true', help='List the columns present in the input file and exit')
     parser.add_argument('-n', '--max-entries', type=int, default=0, metavar='N', help='Process a maximum of N entries (disables multithreading)')
     # parser.add_argument(      '--mt'   , dest='multithread', action='store_true' , help='Enable ROOT implicit multithread (default)', default=True)

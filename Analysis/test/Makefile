@@ -39,19 +39,19 @@ ntuples_data/%:;
 ### Recipes
 
 hists/2023postBPix/%_Chunk0.root: ntuples/2023postBPix/%_Chunk0/ZZ4lAnalysis.root nano2hists.py
-	./nano2hists.py --MC --log $(LOGLEVEL) -o $@ $<
+	./nano2hists.py --MC -y 2023postBPix --log $(LOGLEVEL) -o $@ $<
 
 hists/2022EE/%.root: ntuples/2022EE/%/ZZ4lAnalysis.root nano2hists.py
-	./nano2hists.py --MC --log $(LOGLEVEL) -o $@ $<
+	./nano2hists.py --MC -y 2023postBPix --log $(LOGLEVEL) -o $@ $<
 
 hists/2022EE/.timestamp: $(HISTS_2022EE)
 
 hists/2024/%.root: nano2hists.py $(NTUPLE_DIR)/2024/%_Chunk*/ZZ4lAnalysis.root | hists/2024
-	./$< --log $(LOGLEVEL) -o $@ --MC   $(wordlist 2,$(words $^),$^)
+	./$< --MC   -y 2024 --log $(LOGLEVEL) -o $@ $(wordlist 2,$(words $^),$^)
 hists_cut/2024/%.root: nano2hists.py /eos/user/a/amecca/samples/ZZVBS_Analysis/muonCUT/2024/%_Chunk*/ZZ4lAnalysis.root | hists_cut/2024
-	./$< --log $(LOGLEVEL) -o $@ --MC   $(wordlist 2,$(words $^),$^)
+	./$< --MC   -y 2024 --log $(LOGLEVEL) -o $@ $(wordlist 2,$(words $^),$^)
 hists_data/2024/%.root: nano2hists.py ntuples_data/2024/%_Chunk*/ZZ4lAnalysis.root | hists_data/2024
-	./$< --log $(LOGLEVEL) -o $@ --data $(wordlist 2,$(words $^),$^)
+	./$< --data -y 2024 --log $(LOGLEVEL) -o $@ $(wordlist 2,$(words $^),$^)
 
 hists/2024/data.root: $(patsubst %,hists_data/2024/%.root,$(DATASETS_2024))
 	hadd -f --ff $@ $^
