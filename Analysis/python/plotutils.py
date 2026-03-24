@@ -16,12 +16,14 @@ class VarInfo:
     '''
     def __init__(self, name: str, xtitle: str=None,
                  ytitle: str="Events", logy: bool=False,
+                 rebin=None, # either int or an iterable
                  blind: bool=False,
                  ):
         self.name = name
         self.xtitle = xtitle
         self.ytitle = ytitle
         self.logy = logy
+        self.rebin = rebin
         self.blind = blind
 
 
