@@ -131,6 +131,9 @@ def analyze(df, args):
     futures = [] # <ROOT.RDF.RResultPtr>
     histograms = [] # <ROOT.TH1F>
 
+    ### Pre-selection for SR4P
+    df = df.Filter(*['nZZCand > 0']*2)
+
     ### Aliases and definitions
     df = df.Define('ZZ_mass', 'ZZCand_mass[bestCandIdx]')
     df = df.Define('ZZ_KD'  , 'ZZCand_KD[bestCandIdx]')
