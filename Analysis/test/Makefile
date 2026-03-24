@@ -110,6 +110,10 @@ compare_muID/2024/%_lower.png: compare_muID/2024/.timestamp
 compare_muID/2024/%_channels.png: compare_muID/2024/%_upper.png compare_muID/2024/%_lower.png
 	convert -append $^ +repage $@
 
+dataMC/2024/.timestamp: plot_dataMC.py $(HISTS_MC_2024) hists/2024/data.root | dataMC/2024
+	./$< -o $(@D) -y 2024 --log $(LOGLEVEL) hists/2024
+	touch $@
+
 ./%.svg: ./%.dot
 	dot -Tsvg $< -o$@
 
