@@ -7,13 +7,21 @@ HISTS_2022EE ::= $(patsubst %,hists/2022EE/%.root,$(SAMPLES_2022EE))
 #/eos/user/p/psalvini/MARIO_TAMI/ZZVBS_Analysis/muonMVA
 NTUPLE_DIR     ::= ntuples
 SAMPLES_2024   ::= ZZTo4l_2Jets_EW ZZTo4l_2Jets_EW_QCD ZZTo4l_2Jets_QCD ZZ4Ljj_EWK_LL ZZ4Ljj_EWK_LT ZZ4Ljj_EWK_TT gg4l_POWHEG ggTo2e2mu_Contin_MCFM701 #ggTo4e_Contin_MCFM701 ggTo4m
-DATASETS_2024  ::= EGamma0 EGamma1 Muon0 Muon1 MuonEG
+DATASETS_2024  ::= \
+$(patsubst %,EGamma02024%,Cv1 Dv1 Ev1 Fv1 Gv2 Hv2 Iv1 Iv2) \
+$(patsubst %,EGamma12024%,Cv1 Dv1 Ev1 Fv1 Gv2 Hv1 Iv1 Iv2) \
+$(patsubst %,Muon02024%,  Cv1 Dv1 Ev1 Fv1 Gv1 Hv1 Iv1 Iv2) \
+$(patsubst %,Muon12024%,  Cv1 Dv1 Ev1 Fv1 Gv2 Hv2 Iv1 Iv2) \
+$(patsubst %,MuonEG2024%, Cv1 Dv1 Ev1 Fv2 Gv3 Hv2 Iv2 Iv2v2)
+
+HISTS_MC_2024  ::= $(patsubst %,hists/2024/%.root,$(SAMPLES_2024))
 
 DIRS ::= \
   hists $(patsubst %,hists/%,2022EE 2024) \
   hists_data $(patsubst %,hists_data/%,2022EE 2024) \
   hists_cut hists_cut/2024 compare_muID compare_muID/2024 \
   hists_pol hists_pol/2024 compare_pol compare_pol/2024 \
+  dataMC/2024 \
 
 # all: ZZjj-EWK_hists.root ZZjj-QCD_hists.root
 all: $(HISTS_2024_gg2e2muPOWHEG) #$(HISTS_2024) # compareplots/2023postBPix/.timestamp #$(HISTS_2022EE)
@@ -42,7 +50,7 @@ hists/2024/%.root: nano2hists.py $(NTUPLE_DIR)/2024/%_Chunk*/ZZ4lAnalysis.root |
 	./$< --log $(LOGLEVEL) -o $@ --MC   $(wordlist 2,$(words $^),$^)
 hists_cut/2024/%.root: nano2hists.py /eos/user/a/amecca/samples/ZZVBS_Analysis/muonCUT/2024/%_Chunk*/ZZ4lAnalysis.root | hists_cut/2024
 	./$< --log $(LOGLEVEL) -o $@ --MC   $(wordlist 2,$(words $^),$^)
-hists_data/2024/%.root: nano2hists.py ntuples_data/2024/%2024*_Chunk*/ZZ4lAnalysis.root | hists_data/2024
+hists_data/2024/%.root: nano2hists.py ntuples_data/2024/%_Chunk*/ZZ4lAnalysis.root | hists_data/2024
 	./$< --log $(LOGLEVEL) -o $@ --data $(wordlist 2,$(words $^),$^)
 
 hists/2024/data.root: $(patsubst %,hists_data/2024/%.root,$(DATASETS_2024))
@@ -110,6 +118,7 @@ compare_muID/2024/%_channels.png: compare_muID/2024/%_upper.png compare_muID/202
 debug:
 	@echo "HISTS_2024      : $(HISTS_2024)"
 	@echo "HISTS_2024_gg2e2muPOWHEG: $(HISTS_2024_gg2e2muPOWHEG)"
+	@echo "DATASETS_2024: $(DATASETS_2024)"
 #@echo "HISTS_2024  : $(HISTS_2024)"
 # @echo "HISTS_2022EE: $(HISTS_2022EE)"
 
