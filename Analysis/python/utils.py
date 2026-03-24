@@ -24,12 +24,29 @@ class TFileContext(object):
 lumi_dict = {
     # Errors expressed as lnN parameters: e.g. 1.6% -> 1.016
     'Run2'    : {'value':137620  , 'error_uncorrelated': 1.016,'error_correlated': 0},
-    '2022pre' : {'value':  7980.4, 'error_uncorrelated': 'Ask LUMI POG', 'error_correlated': 'Ask LUMI POG'},
-    '2022EE'  : {'value': 26671.7, 'error_uncorrelated': 'Ask LUMI POG', 'error_correlated': 'Ask LUMI POG'},
-    '2023pre' : {'value': 18063  , 'error_uncorrelated': 'Ask LUMI POG', 'error_correlated': 'Ask LUMI POG'},
-    '2023BPix': {'value':  9693  , 'error_uncorrelated': 'Ask LUMI POG', 'error_correlated': 'Ask LUMI POG'},
-    '2024'    : {'value':109080  , 'error_uncorrelated': 'Ask LUMI POG', 'error_correlated': 'Ask LUMI POG'},
-    'Run3'    : {'value':171488  , 'error_uncorrelated': 'Ask LUMI POG', 'error_correlated': 'Ask LUMI POG'},
+    '2022pre'     : {'value':  8090},
+    '2022EE'      : {'value': 26680},
+    '2023preBPix' : {'value': 18600},
+    '2023postBPix': {'value':  9680},
+    '2024'        : {'value':109950},
+}
+
+# The Run3 correlation scheme is a bit different
+lumi_unc_dict = {
+    "2022&2023&2024": {
+        "lumi_1": {
+            "2022": 1.0138,
+            "2023": 1.0017,
+            "2024": 1.0020
+        },
+        "lumi_2": {
+            "2023": 1.0127,
+            "2024": 1.0068
+        },
+        "lumi_3": {
+            "2024": 1.0144
+        }
+    }
 }
 
 
