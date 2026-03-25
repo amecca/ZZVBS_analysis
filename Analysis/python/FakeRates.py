@@ -13,11 +13,11 @@ with warnings.catch_warnings():
     # Suppress "No precompiled header available. This may affect performance"
     import cppyy
 
-import libutils
+from ZZVBS_analysis.Analysis.libutils import find_root_dir, find_lib
 
 
-_rootdir = libutils.find_root_dir()
-_sopath = libutils.find_lib('FakeRates_cpp.so', rootdir=_rootdir)
+_rootdir = find_root_dir()
+_sopath = find_lib('FakeRates_cpp.so', rootdir=_rootdir)
 _ZZAnalysis = os.path.join(_rootdir, '..',)
 cppyy.add_include_path(os.path.join(_rootdir, 'Analysis/interface'))
 cppyy.load_library(_sopath)
@@ -37,7 +37,7 @@ class FakeRates:
         return val_err.first, val_err.second
 
     def getFRlep(self, lep):
-        return self.getFR(lep.pt, lep.eta, lep.id)
+        return self.getFR(lep.pt, lep.eta, lep.pdgId)
 
 
 def test():
