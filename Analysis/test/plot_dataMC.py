@@ -21,6 +21,7 @@ sys.path.append('../python')
 from plotutils import VarInfo, SampleInfo, SampleHandle, \
     TH1_integr_and_err, cmsDiCanvas_fromTH1, getTAxisLimits
 from utils import lumi_dict
+from samples import get_samples
 
 
 ### To be moved to a separate configuration file?
@@ -28,26 +29,6 @@ variable_dicts = [
     {'name':'ZZ_mass'  , 'xtitle':'m_{ZZ} [GeV]'},
     {'name':'absdetajj', 'xtitle':'|#Delta#eta(j1,j2)|', 'logy':True}
 ]
-
-fnames_2024_gg4e    = ['ggTo4e_Contin_MCFM701_Chunk%d'    %(i) for i in range(16+1)]
-fnames_2024_gg2e2mu = ['ggTo2e2mu_Contin_MCFM701_Chunk%d' %(i) for i in range(24+1)]
-fnames_2024_gg4mu   = ['ggTo4mu_Contin_MCFM701_Chunk%d'   %(i) for i in range(16+1)]
-# fnames_2024_data    =
-sample_dicts = {
-    'qqZZ-EWK': {'title': 'qq #rightarrow ZZjj #rightarrow 4l 2j EWK'    , 'fnames':['ZZTo4l_2Jets_EW_Chunk%d'      %(i) for i in range(2+1)]},
-    'qqZZ-int': {'title': 'qq #rightarrow ZZjj #rightarrow 4l 2j interf.', 'fnames':['ZZTo4l_2Jets_EW_QCD_Chunk%d' %(i) for i in range(3+1)]},
-    'qqZZ-QCD': {'title': 'qq #rightarrow ZZjj #rightarrow 4l 2j QCD'    , 'fnames':['ZZTo4l_2Jets_QCD_Chunk%d'    %(i) for i in range(1+1)]},
-    'ggZZ': {'title': 'gg #rightarrow ZZ #rightarrow 4l', 'fnames':fnames_2024_gg4e+fnames_2024_gg2e2mu+fnames_2024_gg4mu},
-    'data': {'title': 'Data', 'fnames': ['data'], 'color': ROOT.kBlack},
-}
-
-### AUTOMATIC COLORS ###
-n_samples = len(sample_dicts) - 1 #data
-palette = cmsstyle.getPettroffColorSet(n_samples)
-for i, [k, v] in enumerate(sample_dicts.items()):
-    if(k == 'data' or v is None): continue
-    v['color'] = palette[i]
-###
 
 
 def main(args: Namespace):
@@ -61,9 +42,10 @@ def main(args: Namespace):
     variables = [VarInfo(**k) for k in variable_dicts]
 
     # Open the files that contain the histograms to be plotted
+    sample_dicts = get_samples(region='4P') # [{data}, {MC0}, {MC1}, ...]
     samples_MC = []
     sample_data = None
-    for name, v in sample_dicts.items():
+    for v in sample_dicts:
         # Put the absolute path
         v['fpaths'] = [os.path.join(args.inputdir, f+'.root') for f in v['fnames']]
 
@@ -71,14 +53,14 @@ def main(args: Namespace):
             logging.warning('Missing sample "%s"', name)
             continue
 
-        s = SampleHandle(name=name, **v)
-        if name == 'data': sample_data = s
+        s = SampleHandle(**v)
+        if v['name'] == 'data': sample_data = s
         else: samples_MC.append(s)
 
     # Defaults for non-customized vars:
     all_keys = {k.GetName() for k in samples_MC[0].files[0].GetListOfKeys()} #for f in samples_MC[0].files for k in f.GetListOfKeys()
     new_keys = all_keys - {v.name for v in variables}
-    variables.extend([VarInfo(name=n, xtitle=None) for n in new_keys])
+    variables.extend([VarInfo(name=n) for n in new_keys])
 
     # Customize style
     cmsstyle.SetExtraText("Preliminary")
@@ -111,6 +93,7 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
             continue
         h.SetFillColor(sample.color)
         h.SetLineColor(ROOT.kBlack)
+        if(var.rebin is not None): h.Rebin(var.rebin)
         if(logging.getLogger().isEnabledFor(logging.DEBUG)):
             i, e = TH1_integr_and_err(h)
             logging.debug('Add %s: %+7.5g +- %+7.5g', sample.name, i, e)
@@ -124,17 +107,19 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     last_stack = stack.GetStack().Last()
     if(var.xtitle is None): var.xtitle = last_stack.GetXaxis().GetTitle()
 
-    hdata = None #sample_data.get_hist(var.name)
-    is_asimov = False
-    # Empty data (blind plots or we don't have the data)
-    if(hdata is None):
-        is_asimov = True
+    ### DATA ###
+    is_unblind = args.unblind or (not var.blind)
+    if(is_unblind):
+        hdata = sample_data.get_hist(var.name)
+        hdata.SetTitle('data')
+    else:
         hdata = last_stack.Clone('data_asimov')
+        hdata.SetTitle('data Asimov')
         # for b in range(0, hdata.GetNbinsX()+2):
         #     hdata.SetBinContent(b, 0)
         #     hdata.SetBinError  (b, 0)
 
-    hdata.GetXaxis().SetTitle(var.xtitle)
+    if(var.rebin is not None): hdata.Rebin(var.rebin)
 
     # Ratio
     ratio = ROOT.TGraphAsymmErrors()
@@ -144,7 +129,8 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     ratio.Divide(hdata, last_stack, 'pois')
 
     # Canvas creation
-    dicanvas_kwargs = dict(y_min=0, y_scale=2, min_hi_r=2., max_lo_r=0., range_include_err=True,
+    dicanvas_kwargs = dict(y_min=0, y_scale=2, min_hi_r=1.2, max_lo_r=0.8, range_include_err=True,
+                           max_hi_r=4., min_lo_r=0.,
                            nameXaxis=var.xtitle, nameYaxis=var.ytitle, nameRatio='Data/Pred.',
                            iPos=11)
     if(args.y_max is not None): dicanvas_kwargs['y_max'] = args.y_max
@@ -177,7 +163,7 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
         hdata.SetMarkerStyle(20)
         hdata.SetMarkerSize(.8)
         hdata.SetBinErrorOption(ROOT.TH1.kPoisson)
-        legend.AddEntry(hdata, 'data Asimov', 'lpe')
+        legend.AddEntry(hdata, hdata.GetTitle(), 'lpe')
 
     # Draw
     stack.Draw('SAMEHIST')
@@ -217,6 +203,7 @@ def parse_args():
     parser.add_argument('-o', '--outdir', default='latest', metavar='DIR', help='Directory where plots will be saved. Default: %(default)s')
     parser.add_argument('-y', '--year', default='2022EE')
     parser.add_argument('--log', dest='loglevel', metavar='LEVEL', default='WARNING', help='Level for the python logging module. Can be either a mnemonic string like DEBUG, INFO or WARNING or an integer (lower means more verbose).')
+    parser.add_argument(      '--unblind', action='store_true', help='Force unblind all blinded plots')
 
     args = parser.parse_args()
     args.y_max = None
