@@ -18,6 +18,7 @@ class VarInfo:
                  ytitle: str="Events", logy: bool=False,
                  rebin=None, # either int or an iterable
                  blind: bool=False,
+                 **kwargs
                  ):
         self.name = name
         self.xtitle = xtitle
@@ -25,6 +26,7 @@ class VarInfo:
         self.logy = logy
         self.rebin = rebin
         self.blind = blind
+        self.extra = kwargs
 
 
 class SampleInfo:

@@ -26,8 +26,11 @@ from samples import get_samples
 
 ### To be moved to a separate configuration file?
 variable_dicts = [
-    {'name':'ZZ_mass'  , 'xtitle':'m_{ZZ} [GeV]'},
-    {'name':'absdetajj', 'xtitle':'|#Delta#eta(j1,j2)|', 'logy':True}
+    {'name': 'ratio_EW_EWpQCD', 'blind':True, 'logy': True},
+    {'name':'absdetajj', 'xtitle':'|#Delta#eta(j1,j2)|', 'logy':True, 'rebin':4, 'y_scale': 1e7},
+    {'name':'incl_nJets', 'logy':True},
+    {'name':'nJets', 'logy':True, 'y_scale': 1e6},
+    {'name':'FSLFO'}
 ]
 
 
@@ -129,47 +132,49 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     ratio.Divide(hdata, last_stack, 'pois')
 
     # Canvas creation
-    dicanvas_kwargs = dict(y_min=0, y_scale=2, min_hi_r=1.2, max_lo_r=0.8, range_include_err=True,
+    dicanvas_kwargs = dict(y_min=0, min_hi_r=1.2, max_lo_r=0.8, range_include_err=True,
                            max_hi_r=4., min_lo_r=0.,
                            nameXaxis=var.xtitle, nameYaxis=var.ytitle, nameRatio='Data/Pred.',
                            iPos=11)
     if(args.y_max is not None): dicanvas_kwargs['y_max'] = args.y_max
     if(args.r_max is not None): dicanvas_kwargs['r_max'] = args.r_max
+    if(var.logy):
+        dicanvas_kwargs['y_scale'] = var.extra.get('y_scale', 1e6 )
+        dicanvas_kwargs['y_min'  ] = var.extra.get('y_min'  , 1e-2)
+    else:
+        dicanvas_kwargs['y_scale'] = var.extra.get('y_scale', 2)
+        dicanvas_kwargs['y_min'  ] = var.extra.get('y_min'  , 0)
     canvas = cmsDiCanvas_fromTH1(var.name, last_stack, ratio,
                                  **dicanvas_kwargs)
     canvas.cd()
 
     # The legend needs to be created after the canvas, otherwise it won't be drawn
     leg_ymax = .92
-    leg_ymin = leg_ymax - 0.05*(len(samples_MC)+2)  # +2: MC stat, data
-    legend = cmsstyle.cmsLeg(.55, leg_ymin, .90, leg_ymax, textSize=.03)
-    for h, title in refs_for_legend:
-        legend.AddEntry(h, title, 'f')
+    leg_ymin = leg_ymax - 0.04*(len(samples_MC)+2)  # +2: MC stat, data
+    legend = cmsstyle.cmsLeg(.55, leg_ymin, .90, leg_ymax, textSize=.025)
 
     ### Upper pad ###
     canvas.cd(1)
-
-    # Error band in the upper canvas
-    hMCErr = deepcopy(last_stack)
-
-    hMCErr.SetFillStyle(3005)
-    hMCErr.SetMarkerStyle(1)
-    hMCErr.SetFillColor(ROOT.kBlack)
-    legend.AddEntry(hMCErr, "Stat. only", "f")
+    canvas.GetPad(1).SetLogy(var.logy)
 
     # Style data
     if(hdata is not None):
-        hdata.SetLineColor(ROOT.kBlack)
-        hdata.SetMarkerStyle(20)
-        hdata.SetMarkerSize(.8)
         hdata.SetBinErrorOption(ROOT.TH1.kPoisson)
         legend.AddEntry(hdata, hdata.GetTitle(), 'lpe')
 
+    # Error band in the upper canvas
+    hMCErr = deepcopy(last_stack)
+    legend.AddEntry(hMCErr, "Stat. only", "f")
+
+    # Fill legend
+    for h, title in refs_for_legend:
+        legend.AddEntry(h, title, 'f')
+
     # Draw
-    stack.Draw('SAMEHIST')
-    hMCErr.Draw("SAMEE2")
+    cmsstyle.cmsObjectDraw(stack, 'HIST')
+    cmsstyle.cmsObjectDraw(hMCErr, 'E2', FillStyle=3005, MarkerStyle=1, FillColor=ROOT.kBlack)
     if(hdata is not None):
-        hdata.Draw('SAMEPE0X0')
+        cmsstyle.cmsObjectDraw(hdata, 'PE0X0', MarkerStyle=20, MarkerSize=1, LineColor=ROOT.kBlack)
 
     ### Lower pad ###
     canvas.cd(2)
@@ -181,10 +186,7 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     cmsstyle.cmsDrawLine(ref_line, lcolor=ROOT.kBlack, lstyle=ROOT.kDotted)
 
     # Ratio
-    ratio.SetLineColor(ROOT.kBlack)
-    ratio.SetMarkerStyle(20)
-    ratio.SetMarkerSize(.8)
-    ratio.Draw('PE')
+    cmsstyle.cmsObjectDraw(ratio, 'PE', LineColor=ROOT.kBlack, MarkerStyle=20, MarkerSize=1)
 
     for ext in ['png', 'pdf']:
         outfname = os.path.join(args.outdir, var.name+'.'+ext)
