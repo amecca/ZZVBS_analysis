@@ -13,6 +13,7 @@ import logging
 from subprocess import run
 from copy import deepcopy
 from math import log10, ceil
+import re
 import ROOT
 import cmsstyle
 
@@ -75,6 +76,12 @@ def main(args: Namespace):
     # ROOT.gStyle.SetLabelSize(0.045, "X")
 
     os.makedirs(args.outdir, exist_ok=True)
+
+    # Plot only variables matching the requested pattern
+    if(args.regex_incl is not None):
+        variables = [v for v in variables if args.regex_incl.search(v.name)]
+    if(args.regex_excl is not None):
+        variables = [v for v in variables if not args.regex_excl.search(v.name)]
 
     for var in variables:
         plot_var(var, sample_data, samples_MC, args)
@@ -204,6 +211,8 @@ def parse_args():
     parser.add_argument('inputdir', metavar='DIR', help='Folder containing the ROOT files with the histograms to be plotted')
     parser.add_argument('-o', '--outdir', default='latest', metavar='DIR', help='Directory where plots will be saved. Default: %(default)s')
     parser.add_argument('-y', '--year', default='2022EE')
+    parser.add_argument('-p', '--plot'   , dest='regex_incl', type=re.compile, default=None)
+    parser.add_argument(      '--exclude', dest='regex_excl', type=re.compile, default=None)
     parser.add_argument('--log', dest='loglevel', metavar='LEVEL', default='WARNING', help='Level for the python logging module. Can be either a mnemonic string like DEBUG, INFO or WARNING or an integer (lower means more verbose).')
     parser.add_argument(      '--unblind', action='store_true', help='Force unblind all blinded plots')
 
