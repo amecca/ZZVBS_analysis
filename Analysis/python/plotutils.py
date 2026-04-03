@@ -85,7 +85,7 @@ def add_list_TObj(*args):
     Add() a list of TObjects, starting from the first non-None
     '''
     result = None
-    for a in [ a for a in args if a is not None ]:
+    for a in [ a for a in args if a ]:
         if(result is None):
             result = a
         else:

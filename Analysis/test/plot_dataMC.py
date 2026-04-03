@@ -98,7 +98,7 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     refs_for_legend = []
     for sample in samples_MC:
         h = sample.get_hist(var.name)
-        if(h is None):
+        if(not h):
             logging.warning('No histogram for sample %s', sample.name)
             continue
         h.SetFillColor(sample.color)
@@ -122,14 +122,13 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     if(is_unblind):
         hdata = sample_data.get_hist(var.name)
         hdata.SetTitle('data')
+        if(var.rebin is not None): hdata.Rebin(var.rebin)
     else:
         hdata = last_stack.Clone('data_asimov')
         hdata.SetTitle('data Asimov')
         # for b in range(0, hdata.GetNbinsX()+2):
         #     hdata.SetBinContent(b, 0)
         #     hdata.SetBinError  (b, 0)
-
-    if(var.rebin is not None): hdata.Rebin(var.rebin)
 
     # Ratio
     ratio = ROOT.TGraphAsymmErrors()
