@@ -132,5 +132,9 @@ test: .test_EWK .test_QCD
 	compare_rootfiles3.py $^
 	touch $@
 
+.PHONY: hists-data hists-MC
+hists-data: hists/2024/data.root
+hists-MC: $(HISTS_MC_2024)
+
 .PHONY: plots_compare_muID
 plots_compare: plots/.timestamp
