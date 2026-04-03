@@ -57,7 +57,7 @@ def main(args):
     t_start = time()
     histograms = analyze(df, args)
     t_end = time()
-    logging.info('Time elapsed: %g s', t_end-t_start)
+    logging.info('Time elapsed: %.3g s', t_end-t_start)
 
     # Write histograms
     with TFileContext(args.fname_out, 'RECREATE') as tf_out:
@@ -139,6 +139,8 @@ def analyze(df, args):
     ### Aliases and definitions
     df = df.Define('ZZ_mass', 'ZZCand_mass[bestCandIdx]')
     df = df.Define('ZZ_KD'  , 'ZZCand_KD[bestCandIdx]')
+    df = df.Define('Z1_mass', 'ZZCand_Z1mass[bestCandIdx]')
+    df = df.Define('Z2_mass', 'ZZCand_Z2mass[bestCandIdx]')
     df = df.Define('j1_pt' , 'Jet_pt[JetLeadingIdx]')
     df = df.Define('j2_pt' , 'Jet_pt[JetSubleadingIdx]')
     df = df.Define('j1_eta', 'Jet_eta[JetLeadingIdx]')
@@ -183,25 +185,41 @@ def analyze(df, args):
     kinj2 = ['Jet_%s[JetSubleadingIdx]'%(var) for var in ('pt', 'eta', 'phi', 'mass')]
     df = df.Define('mj1j2' , 'sum_M_mass(' + ', '.join(kinj1 + kinj2) + ')')
 
+    # MELA probabilities (automatic from the branch names)
+    branches = [str(b) for b in df.GetColumnNames()]
+    branches_prob = [b for b in branches if b.startswith('ZZCand_P_')]
+    probs = [p[len('ZZCand_P_'):] for p in branches_prob]
+    logging.debug('MELA probs (%d): %s', len(probs), probs)
+
+    # MELA probabilities and ratio
+    if(all(p in probs for p in ('JJVBF_BKG_MCFM_JECNominal', 'JJQCD_BKG_MCFM_JECNominal'))):
+        df = df.Define('P_EWK', 'ZZCand_P_{0}[bestCandIdx]'.format('JJVBF_BKG_MCFM_JECNominal'))
+        df = df.Define('P_QCD', 'ZZCand_P_{0}[bestCandIdx]'.format('JJQCD_BKG_MCFM_JECNominal'))
+        for prob in ('P_EWK', 'P_QCD'):
+            df = df.Define(prob+'_log', 'log(%s)'%(prob))
+        df = df.Define('ratio_EW_EWpQCD', 'P_EWK/(P_EWK+P_QCD)')
+    else:
+        df = df.Define('P_EWK', '0').Define('P_QCD', '0')
+
     ### Inclusive histograms
-    futures.append(mkhist(df, 'incl_nJets', ';# jets', 10,-0.5,9.5, v='nCleanedJetsPt30'))
+    # futures.append(mkhist(df, 'incl_nJets', ';# jets', 10,-0.5,9.5, v='nCleanedJetsPt30'))
 
     ### Selection
     # df = df.Filter(*['ZZ_mass > 100']*2)
     # df = df.Filter(*['ZZ_mass < 340']*2)
     df = df.Filter(*['nCleanedJetsPt30 >= 2']*2)
-    # df = df.Filter(*['absdetajj > 1']*2)
     df = df.Filter(*['mj1j2 > 120']*2)
 
     ### Histograms
-    futures.append(mkhist(df, 'ZZ_mass', ';m_{ZZ} [GeV]', 60,0,600))
-    futures.append(mkhist(df, 'ZZ_KD'  , ';KD', 50,0,1))
-    futures.append(mkhist(df, 'absdetajj', ';|#Delta #eta_{jj}|', 80,0,8))
-    futures.append(mkhist(df, 'j1_pt', ';j1 p_{T} [GeV]', 60,0,600))
-    futures.append(mkhist(df, 'j2_pt', ';j2 p_{T} [GeV]', 60,0,600))
-    futures.append(mkhist(df, 'FSLFO', ';Final state', 4,0,4))
-    futures.append(mkhist(df, 'mj1j2', ';m_{j1 j2}' , 60,0,1200))
-    futures.append(mkhist(df, 'nJets', ';# jets', 10,-0.5,9.5, v='nCleanedJetsPt30'))
+    futures.extend( define_histograms(df         , prefix='') )
+    df_VBSincl  = df         .Filter(*['ZZ_mass > 180']*2)
+    futures.extend( define_histograms(df_VBSincl , prefix='VBSincl-') )
+    df_mjj400   = df_VBSincl .Filter(*['mj1j2 > 400']*2)
+    futures.extend( define_histograms(df_mjj400  , prefix='mZZ180-mjj400-') )
+    df_VBSloose = df_mjj400  .Filter(*['absdetajj > 2.4']*2)
+    futures.extend( define_histograms(df_VBSloose, prefix='VBSloose-') )
+    df_VBStight = df_VBSloose.Filter(*['mj1j2 > 1000']*2)
+    futures.extend( define_histograms(df_VBStight, prefix='VBStight-') )
 
     for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
         futures.append(mkhist(df, '%s_pt' %(Zxlx),    ';%s p_{T} [GeV]'%(Zxlx), 60,0.,600., v='%s_pt'     %(Zxlx)))
@@ -214,36 +232,11 @@ def analyze(df, args):
         df_ch = df.Filter('FSLFO==%d' %(fs.value))
         fsname = fs.name.replace('fs','')
         fstitle= fsname.replace('mu','#mu').strip()
-        futures.append(mkhist(df_ch, 'ZZ_mass_%s'%(fsname), ';m_{ZZ} [GeV], %s'%(fstitle), 60,0,600, v='ZZ_mass'))
+        futures.append(mkhist(df_ch, 'ZZ_mass_%s'%(fsname), ';m_{ZZ} [GeV], %s'%(fstitle), 60,0,1200, v='ZZ_mass'))
         # for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
         #     futures.append(mkhist(df_ch, '%s_pt_%s' %(Zxlx, fsname), ';%s p_{T} [GeV], %s'%(Zxlx, fstitle), 60,0,600, v='%s_pt'     %(Zxlx)))
         #     futures.append(mkhist(df_ch, '%s_eta_%s'%(Zxlx, fsname), ';%s #eta, %s'       %(Zxlx, fstitle), 60,-3,3., v='%s_eta'    %(Zxlx)))
         #     futures.append(mkhist(df_ch, '%s_phi_%s'%(Zxlx, fsname), ';%s #phi/#pi, %s'   %(Zxlx, fstitle), 50,-1,1., v='%s_phinorm'%(Zxlx)))
-
-    # MELA probabilities (automatic from the branch names)
-    branches = [str(b) for b in df.GetColumnNames()]
-    branches_prob = [b for b in branches if b.startswith('ZZCand_P_')]
-    probs = [p[len('ZZCand_P_'):] for p in branches_prob]
-    logging.debug('MELA probs (%d): %s', len(probs), probs)
-    for prob in probs:
-        value = 'ZZCand_P_{0}[bestCandIdx]'.format(prob)
-        logging.debug('%s: %s', prob, value)
-        df = df.Define(prob, value)
-        df = df.Define(prob+'_log', 'log(%s)'%(prob))
-        if  (prob == 'JJVBF_BKG_MCFM_JECNominal'): title = 'EW'
-        elif(prob == 'JJQCD_BKG_MCFM_JECNominal'): title = 'QCD'
-        else: title = prob
-        # futures.append(mkhist (df, 'MELA_'+prob       , ';P(%s)'     %(title), 50, 0 , 1, v=prob))
-        futures.append(mkhist (df, 'MELA_'+prob+'_log', ';log(P(%s))'%(title), 50,-50, 0, v=prob+'_log'))
-
-    # Mela ratio
-    if(all(p in probs for p in ('JJVBF_BKG_MCFM_JECNominal', 'JJQCD_BKG_MCFM_JECNominal'))):
-        df = df.Define('P_EWK', 'ZZCand_P_{0}[bestCandIdx]'.format('JJVBF_BKG_MCFM_JECNominal'))
-        df = df.Define('P_QCD', 'ZZCand_P_{0}[bestCandIdx]'.format('JJQCD_BKG_MCFM_JECNominal'))
-        df = df.Define('ratio_EW_EWpQCD', 'P_EWK/(P_EWK+P_QCD)')
-        futures.append(mkhist (df, 'ratio_EW_EWpQCD', ';P_{EW}/(P_{EW}+P_{QCD})', 51, 0, 1+1./50))
-    else:
-        df = df.Define('P_EWK', '0').Define('P_QCD', '0')
 
     zeroMELA = df.Filter("P_EWK == 0 && P_QCD == 0")
     n_zeroMELA = zeroMELA.Count()
@@ -257,6 +250,25 @@ def analyze(df, args):
     logging.info('Events with MELA==0 / total: %d/%d', n_zeroMELA.GetValue(), n_total.GetValue())
 
     return histograms
+
+
+def define_histograms(df, prefix=''):
+    futures = []
+    futures.append(mkhist(df, prefix+'ZZ_mass'  , ';m_{ZZ} [GeV]'      ,60,  0,1200, v='ZZ_mass'  ))
+    futures.append(mkhist(df, prefix+'ZZ_KD'    , ';KD'                ,50,  0,   1, v='ZZ_KD'    ))
+    futures.append(mkhist(df, prefix+'Z1_mass'  , ';m_{Z1} [GeV]'      ,60, 60, 120, v='Z1_mass'  ))
+    futures.append(mkhist(df, prefix+'Z2_mass'  , ';m_{Z2} [GeV]'      ,60, 60, 120, v='Z2_mass'  ))
+    futures.append(mkhist(df, prefix+'absdetajj', ';|#Delta #eta_{jj}|',80,  0,   8, v='absdetajj'))
+    futures.append(mkhist(df, prefix+'j1_pt'    , ';j1 p_{T} [GeV]'    ,60,  0, 600, v='j1_pt'    ))
+    futures.append(mkhist(df, prefix+'j2_pt'    , ';j2 p_{T} [GeV]'    ,60,  0, 600, v='j2_pt'    ))
+    futures.append(mkhist(df, prefix+'FSLFO'    , ';Final state'       , 4,  0,   4, v='FSLFO'    ))
+    futures.append(mkhist(df, prefix+'mj1j2'    , ';m_{j1 j2}'         ,60,  0,1200, v='mj1j2'    ))
+    futures.append(mkhist(df, prefix+'nJets'    , ';# jets'            ,10,-.5, 9.5, v='nCleanedJetsPt30'))
+    for prob in ('EWK', 'QCD'):
+        futures.append(mkhist(df, prefix+'MELA_'+prob+'_log', ';log(P(%s))'%(prob), 50,-50, 0, v='P_%s_log'%(prob)))
+    futures.append(mkhist (df, prefix+'ratio_EW_EWpQCD', ';P_{EW}/(P_{EW}+P_{QCD})', 50, 0, 1, v='ratio_EW_EWpQCD'))
+
+    return futures
 
 
 def fix_xlabels_FSLFO(h):

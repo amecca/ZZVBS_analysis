@@ -29,11 +29,9 @@ from samples import get_samples
 variable_dicts = [
     {'name': 'ratio_EW_EWpQCD', 'blind':True, 'logy': True},
     {'name':'absdetajj', 'xtitle':'|#Delta#eta(j1,j2)|', 'logy':True, 'rebin':4, 'y_scale': 1e7},
-    {'name':'incl_nJets', 'logy':True},
     {'name':'nJets', 'logy':True, 'y_scale': 1e6},
     {'name':'FSLFO'}
 ]
-
 
 def main(args: Namespace):
     ROOT.gROOT.SetBatch(True)
@@ -43,7 +41,13 @@ def main(args: Namespace):
 
     # Create a list of VarInfo objects, which sets some defaults in the constructor
     # and simplify the code doing the plotting
-    variables = [VarInfo(**k) for k in variable_dicts]
+    # variables = [VarInfo(**k) for k in variable_dicts]
+    variables = []
+    for k in variable_dicts:
+        tmp = dict(**k)
+        for prefix in ('', 'VBSincl-', 'mZZ180-mjj400-', 'VBSloose-', 'VBStight-'):
+            tmp['name'] = prefix+k['name']
+            variables.append(VarInfo(**tmp))
 
     # Open the files that contain the histograms to be plotted
     sample_dicts = get_samples(region='4P') # [{data}, {MC0}, {MC1}, ...]
@@ -84,6 +88,8 @@ def main(args: Namespace):
         variables = [v for v in variables if not args.regex_excl.search(v.name)]
 
     for var in variables:
+        if(var.name.startswith(('VBSloose', 'VBStight'))):
+            var.blind = True
         plot_var(var, sample_data, samples_MC, args)
 
     return 0
