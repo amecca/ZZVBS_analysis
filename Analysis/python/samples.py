@@ -10,13 +10,14 @@ SAMPLE_DICTS = {
     'ggZZ'    : {'title': 'gg #rightarrow ZZ #rightarrow 4l MCFM', 'fnames': ['ggTo%s_Contin_MCFM701'%(fs) for fs in ('4e','2e2mu','4mu')]},
     'rare'    : {'title': 'VVZ', 'fnames':['ZZZ','WZZ','WWZ']}, #ttZ "t#bar{t}Z" is missing!
     'qqZZ-1J' : {'title': 'q#bar{q} #rightarrow ZZ+1j #rightarrow 4l j'        , 'fnames':['ZZTo4l_1Jets']},
-    'qqZZ'    : {'title': 'q#bar{q} #rightarrow ZZ #rightarrow 4l'             , 'fnames':['ZZTo4l']},
+    'qqZZ'    : {'title': 'q#bar{q} #rightarrow ZZ #rightarrow 4l (Powheg)'    , 'fnames':['ZZTo4l']},
+    'ZX'      : {'title': 'Z+X'                                                , 'fnames':['ZX']},
 }
 
 DATA = {'name': 'data', 'title': 'Data', 'fnames': ['data'], 'color': ROOT.kBlack}
 
 def get_samples(region: str='4P'):
-    MC_names = ['qqZZ-EWK', 'qqZZ-int', 'qqZZ-QCD', 'ggZZ', 'rare'] #, 'qqZZ', 'qqZZ-1J']
+    MC_names = ['qqZZ-EWK', 'qqZZ-QCD', 'qqZZ', 'ggZZ', 'rare', 'ZX'] #, 'qqZZ-int', 'qqZZ-1J']
     MCs = [{'name':k, **SAMPLE_DICTS[k]} for k in MC_names]
 
     # AUTOMATIC COLORS #
