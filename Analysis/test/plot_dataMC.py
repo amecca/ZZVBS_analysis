@@ -25,6 +25,18 @@ from utils import lumi_dict
 from samples import get_samples
 
 
+DRAW_STYLE = {
+    'data'       : dict(opt='PE', LineColor=ROOT.kBlack, MarkerStyle=20 , LineWidth=1, MarkerSize=1.0),
+    'MCerr'      : dict(opt='E2', FillStyle=3345, FillColor=ROOT.kGray+3, LineWidth=0, MarkerSize=0  ),
+    'ref_ratio_l': dict(lcolor=ROOT.kBlack, lstyle=ROOT.kDotted),
+    'labels': {
+        'data': 'Data',
+        'MCerr': 'Stat. only',
+    }
+}
+DRAW_STYLE['ratio'] = {**DRAW_STYLE['data'], 'opt':'PZ'}
+
+
 ### To be moved to a separate configuration file?
 variable_dicts = [
     {'name': 'ratio_EW_EWpQCD', 'blind':True, 'logy': True},
@@ -127,21 +139,22 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     is_unblind = args.unblind or (not var.blind)
     if(is_unblind):
         hdata = sample_data.get_hist(var.name)
-        hdata.SetTitle('data')
+        hdata.SetTitle(DRAW_STYLE['labels']['data'])
         if(var.rebin is not None): hdata.Rebin(var.rebin)
     else:
         hdata = last_stack.Clone('data_asimov')
-        hdata.SetTitle('data Asimov')
-        # for b in range(0, hdata.GetNbinsX()+2):
-        #     hdata.SetBinContent(b, 0)
-        #     hdata.SetBinError  (b, 0)
+        hdata.SetTitle('data (blind)')
+        for b in range(0, hdata.GetNbinsX()+2):
+            hdata.SetBinContent(b, 0)
+            hdata.SetBinError  (b, 0)
 
     # Ratio
     ratio = ROOT.TGraphAsymmErrors()
     ratio.SetName('ratio')
     logging.debug('data: %s', hdata)
     logging.debug('MC  : %s', last_stack)
-    ratio.Divide(hdata, last_stack, 'pois')
+    if(is_unblind):
+        ratio.Divide(hdata, last_stack, 'pois')
 
     # Canvas creation
     dicanvas_kwargs = dict(y_min=0, min_hi_r=1.2, max_lo_r=0.8, range_include_err=True,
@@ -176,7 +189,7 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
 
     # Error band in the upper canvas
     hMCErr = deepcopy(last_stack)
-    legend.AddEntry(hMCErr, "Stat. only", "f")
+    legend.AddEntry(hMCErr, DRAW_STYLE['labels']['MCerr'], "f")
 
     # Fill legend
     for h, title in refs_for_legend:
@@ -184,9 +197,9 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
 
     # Draw
     cmsstyle.cmsObjectDraw(stack, 'HIST')
-    cmsstyle.cmsObjectDraw(hMCErr, 'E2', FillStyle=3005, MarkerStyle=1, FillColor=ROOT.kBlack)
+    cmsstyle.cmsObjectDraw(hMCErr, **DRAW_STYLE['MCerr'])
     if(hdata is not None):
-        cmsstyle.cmsObjectDraw(hdata, 'PE0X0', MarkerStyle=20, MarkerSize=1, LineColor=ROOT.kBlack)
+        cmsstyle.cmsObjectDraw(hdata, **DRAW_STYLE['data'])
 
     ### Lower pad ###
     canvas.cd(2)
@@ -197,8 +210,19 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     ref_line = ROOT.TLine(x_min, 1, x_max, 1)
     cmsstyle.cmsDrawLine(ref_line, lcolor=ROOT.kBlack, lstyle=ROOT.kDotted)
 
+    # Gray area representing MC error
+    pred_ratio = last_stack.Clone('pred_ratio')
+    pred_ratio.Divide(stack.GetStack().Last())
+    cmsstyle.cmsObjectDraw(pred_ratio, **DRAW_STYLE['MCerr'])
+
     # Ratio
-    cmsstyle.cmsObjectDraw(ratio, 'PE', LineColor=ROOT.kBlack, MarkerStyle=20, MarkerSize=1)
+    if(is_unblind):
+        cmsstyle.cmsObjectDraw(ratio, **DRAW_STYLE['ratio'])
+    else:
+        x_start = (x_min + x_max)/2 - (x_max - x_min)/8
+        text = ROOT.TText(x_start, 1.2, "BLINDED")
+        text.SetTextSize(.12)
+        text.Draw("same")
 
     for ext in ['png', 'pdf']:
         outfname = os.path.join(args.outdir, var.name+'.'+ext)
