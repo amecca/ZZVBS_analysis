@@ -122,11 +122,12 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
         h.SetFillColor(sample.color)
         h.SetLineColor(ROOT.kBlack)
         if(var.rebin is not None): h.Rebin(var.rebin)
-        if(logging.getLogger().isEnabledFor(logging.DEBUG)):
-            i, e = TH1_integr_and_err(h)
-            logging.debug('Add %s: %+7.5g +- %+7.5g', sample.name, i, e)
+        i, e = TH1_integr_and_err(h)
+        logging.debug('Add %s: %+7.5g +- %+7.5g', sample.name, i, e)
         stack.Add(h)
-        refs_for_legend.append([h, sample.title])
+        leg_title = sample.title
+        if(args.add_yield): leg_title += ' (%.3g)'%(i)
+        refs_for_legend.append([h, leg_title])
 
     if(stack.GetNhists() == 0):
         logging.error('No MC histograms for %s', var.name)
@@ -139,7 +140,6 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     is_unblind = args.unblind or (not var.blind)
     if(is_unblind):
         hdata = sample_data.get_hist(var.name)
-        hdata.SetTitle(DRAW_STYLE['labels']['data'])
         if(var.rebin is not None): hdata.Rebin(var.rebin)
     else:
         hdata = last_stack.Clone('data_asimov')
@@ -185,7 +185,11 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     # Style data
     if(hdata is not None):
         hdata.SetBinErrorOption(ROOT.TH1.kPoisson)
-        legend.AddEntry(hdata, hdata.GetTitle(), 'lpe')
+        leg_title = DRAW_STYLE['labels']['data']
+        if(args.add_yield):
+            i, _ = TH1_integr_and_err(hdata)
+            leg_title += ' (%.3g)'%(i)
+        legend.AddEntry(hdata, leg_title, 'lpe')
 
     # Error band in the upper canvas
     hMCErr = deepcopy(last_stack)
@@ -242,6 +246,7 @@ def parse_args():
     parser.add_argument('-y', '--year', default='2022EE')
     parser.add_argument('-p', '--plot'   , dest='regex_incl', type=re.compile, default=None)
     parser.add_argument(      '--exclude', dest='regex_excl', type=re.compile, default=None)
+    parser.add_argument(      '--yield'  , dest='add_yield' , action='store_true', help='Write the yield of each process in the legend')
     parser.add_argument('--log', dest='loglevel', metavar='LEVEL', default='WARNING', help='Level for the python logging module. Can be either a mnemonic string like DEBUG, INFO or WARNING or an integer (lower means more verbose).')
     parser.add_argument(      '--unblind', action='store_true', help='Force unblind all blinded plots')
 
