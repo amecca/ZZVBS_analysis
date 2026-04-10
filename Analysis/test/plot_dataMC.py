@@ -20,28 +20,23 @@ import cmsstyle
 import sys
 sys.path.append('../python')
 from plotutils import VarInfo, SampleInfo, SampleHandle, \
-    TH1_integr_and_err, cmsDiCanvas_fromTH1, getTAxisLimits
+    DRAW_STYLE, \
+    TH1_integr_and_err, cmsDiCanvas_fromObjs, getTAxisLimits
 from utils import lumi_dict
 from samples import get_samples
 
 
-DRAW_STYLE = {
-    'data'       : dict(opt='PE', LineColor=ROOT.kBlack, MarkerStyle=20 , LineWidth=1, MarkerSize=1.0),
-    'MCerr'      : dict(opt='E2', FillStyle=3345, FillColor=ROOT.kGray+3, LineWidth=0, MarkerSize=0  ),
-    'ref_ratio_l': dict(lcolor=ROOT.kBlack, lstyle=ROOT.kDotted),
-    'labels': {
-        'data': 'Data',
-        'MCerr': 'Stat. only',
-    }
-}
-DRAW_STYLE['ratio'] = {**DRAW_STYLE['data'], 'opt':'PZ'}
-
-
 ### To be moved to a separate configuration file?
 variable_dicts = [
-    {'name': 'ratio_EW_EWpQCD', 'blind':True, 'logy': True},
+    {'name': 'ratio_EW_EWpQCD', 'blind':True, 'logy': True, 'y_scale': 1e3},
     {'name':'absdetajj', 'xtitle':'|#Delta#eta(j1,j2)|', 'logy':True, 'rebin':4, 'y_scale': 1e7},
     {'name':'nJets', 'logy':True, 'y_scale': 1e6},
+    *[{'name': Zxlx+'_eta'    , 'y_scale': 3, 'rebin':5} for Zxlx in ('Z1l1','Z1l2','Z2l1','Z2l2')],
+    *[{'name': Zxlx+'_phinorm', 'y_scale': 3, 'rebin':5} for Zxlx in ('Z1l1','Z1l2','Z2l1','Z2l2')],
+    # {'name': 'ZZ_mass', 'blind':True},
+    {'name': 'ZZ_Muon_minmvaLowPt', 'logy':True, 'y_min': 1e-2},
+    # {'name': 'ZZ_leadingMu_eta', 'rebin':1},
+    # {'name': 'ZZ_subleadMu_eta', 'rebin':1},
     {'name':'FSLFO'}
 ]
 
@@ -80,7 +75,7 @@ def main(args: Namespace):
     # Defaults for non-customized vars:
     all_keys = {k.GetName() for k in samples_MC[0].files[0].GetListOfKeys()} #for f in samples_MC[0].files for k in f.GetListOfKeys()
     new_keys = all_keys - {v.name for v in variables}
-    variables.extend([VarInfo(name=n) for n in new_keys])
+    variables.extend([VarInfo(name=n, rebin=args.rebin) for n in new_keys])
 
     # Customize style
     cmsstyle.SetExtraText("Preliminary")
@@ -102,6 +97,10 @@ def main(args: Namespace):
     for var in variables:
         if(var.name.startswith(('VBSloose', 'VBStight'))):
             var.blind = True
+        if  (var.name.startswith('VBSloose-ratio')):
+            var.extra['y_min'] = 1e-2
+        if  (var.name.startswith('VBStight-ratio')):
+            var.extra['y_min'] = 1e-3
         plot_var(var, sample_data, samples_MC, args)
 
     return 0
@@ -121,12 +120,16 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
             continue
         h.SetFillColor(sample.color)
         h.SetLineColor(ROOT.kBlack)
+        h.Scale(sample.kfactor)
         if(var.rebin is not None): h.Rebin(var.rebin)
         i, e = TH1_integr_and_err(h)
         logging.debug('Add %s: %+7.5g +- %+7.5g', sample.name, i, e)
         stack.Add(h)
         leg_title = sample.title
-        if(args.add_yield): leg_title += ' (%.3g)'%(i)
+        if(args.add_yield):
+            if(abs(sample.kfactor-1) > 1e-6):
+                leg_title += ' x%s'%(sample.kfactor)
+            leg_title += ' (%.3g)'%(i)
         refs_for_legend.append([h, leg_title])
 
     if(stack.GetNhists() == 0):
@@ -165,11 +168,11 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     if(args.r_max is not None): dicanvas_kwargs['r_max'] = args.r_max
     if(var.logy):
         dicanvas_kwargs['y_scale'] = var.extra.get('y_scale', 1e6 )
-        dicanvas_kwargs['y_min'  ] = var.extra.get('y_min'  , 1e-2)
+        dicanvas_kwargs['y_min'  ] = var.extra.get('y_min'  , 1e-1)
     else:
         dicanvas_kwargs['y_scale'] = var.extra.get('y_scale', 2)
         dicanvas_kwargs['y_min'  ] = var.extra.get('y_min'  , 0)
-    canvas = cmsDiCanvas_fromTH1(var.name, last_stack, ratio,
+    canvas = cmsDiCanvas_fromObjs(var.name, last_stack, hdata, ratio,
                                  **dicanvas_kwargs)
     canvas.cd()
 
@@ -199,7 +202,26 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     for h, title in refs_for_legend:
         legend.AddEntry(h, title, 'f')
 
+    # Region label
+    split = var.name.split('-')
+    if(args.region_label and split[0].startswith('VBS')):
+        logging.debug('Adding TPaveText -> %s', split[0])
+        pave_text = ROOT.TPaveText(
+            ROOT.gPad.GetLeftMargin() + 0.025,
+            1 - ROOT.gPad.GetTopMargin() - 0.15,
+            0.6,
+            1 - ROOT.gPad.GetTopMargin() - 0.22,
+            "NB NDC"
+        )
+        pave_text.AddText(split[0].replace('VBS', 'ZZjj ').replace('incl', 'inclusive'))
+        pave_text.SetTextAlign(ROOT.ETextAlign.kHAlignLeft + ROOT.ETextAlign.kVAlignTop)
+    else:
+        logging.debug('No TPaveText for %s', var.name)
+        pave_text = None
+
     # Draw
+    if(pave_text is not None):
+        cmsstyle.cmsObjectDraw(pave_text, TextSize=.05, FillColor=ROOT.kWhite)
     cmsstyle.cmsObjectDraw(stack, 'HIST')
     cmsstyle.cmsObjectDraw(hMCErr, **DRAW_STYLE['MCerr'])
     if(hdata is not None):
@@ -247,6 +269,8 @@ def parse_args():
     parser.add_argument('-p', '--plot'   , dest='regex_incl', type=re.compile, default=None)
     parser.add_argument(      '--exclude', dest='regex_excl', type=re.compile, default=None)
     parser.add_argument(      '--yield'  , dest='add_yield' , action='store_true', help='Write the yield of each process in the legend')
+    parser.add_argument(      '--rebin'  , default=1, type=int, help='A default value for plots that do not specify one (default: %(default)d)')
+    parser.add_argument(      '--region-label', action='store_true')
     parser.add_argument('--log', dest='loglevel', metavar='LEVEL', default='WARNING', help='Level for the python logging module. Can be either a mnemonic string like DEBUG, INFO or WARNING or an integer (lower means more verbose).')
     parser.add_argument(      '--unblind', action='store_true', help='Force unblind all blinded plots')
 

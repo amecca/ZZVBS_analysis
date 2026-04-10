@@ -6,7 +6,7 @@ HISTS_2022EE ::= $(patsubst %,hists/2022EE/%.root,$(SAMPLES_2022EE))
 
 #/eos/user/p/psalvini/MARIO_TAMI/ZZVBS_Analysis/muonMVA
 NTUPLE_DIR     ::= ntuples
-SAMPLES_2024   ::= ZZTo4l_2Jets_EW ZZTo4l_2Jets_EW_QCD ZZTo4l_2Jets_QCD ZZ4Ljj_EWK_LL ZZ4Ljj_EWK_LT ZZ4Ljj_EWK_TT gg4l_POWHEG ggTo2e2mu_Contin_MCFM701 #ggTo4e_Contin_MCFM701 ggTo4m
+SAMPLES_2024   ::= ZZTo4l_2Jets_EW ZZTo4l_2Jets_QCD ggTo2e2mu_Contin_MCFM701 ggTo4e_Contin_MCFM701 ggTo4mu_Contin_MCFM701 ZZZ WZZ WWZ ZX ZZTo4l_1Jets # ZZTo4l ZZTo4l_1Jets ZZTo4l_2Jets_EW_QCD ZZ4Ljj_EWK_LL ZZ4Ljj_EWK_LT ZZ4Ljj_EWK_TT gg4l_POWHEG
 DATASETS_2024  ::= \
 $(patsubst %,EGamma02024%,Cv1 Dv1 Ev1 Fv1 Gv2 Hv2 Iv1 Iv2) \
 $(patsubst %,EGamma12024%,Cv1 Dv1 Ev1 Fv1 Gv2 Hv1 Iv1 Iv2) \
@@ -52,6 +52,7 @@ hists_cut/2024/%.root: nano2hists.py /eos/user/a/amecca/samples/ZZVBS_Analysis/m
 	./$< --MC   -y 2024 --log $(LOGLEVEL) -o $@ $(wordlist 2,$(words $^),$^)
 hists_data/2024/%.root: nano2hists.py ntuples_data/2024/%_Chunk*/ZZ4lAnalysis.root | hists_data/2024
 	./$< --data -y 2024 --log $(LOGLEVEL) -o $@ $(wordlist 2,$(words $^),$^)
+hists/%/ZX.root: ;
 
 hists/2024/data.root: $(patsubst %,hists_data/2024/%.root,$(DATASETS_2024))
 	hadd -f --ff $@ $^
@@ -85,7 +86,7 @@ compare_gg4l/2024/.timestamp: compare_samples.py hists/2024/ggTo2e2mu_Contin_MCF
 	./compare_samples.py -o $(@D) -y 2024 --log $(LOGLEVEL) \
 	-1 $(word 2,$^) \
 	-2 $(word 3,$^) \
-	--logy \
+	--rebin 2 \
 	--title1 "gg #rightarrow 2e2#mu MCFM" --title2 "gg #rightarrow 2e2#mu POWHEG" --title-r "POW/MCFM"
 	touch $@
 

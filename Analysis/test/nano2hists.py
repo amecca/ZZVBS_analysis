@@ -141,10 +141,16 @@ def analyze(df, args):
     df = df.Define('ZZ_KD'  , 'ZZCand_KD[bestCandIdx]')
     df = df.Define('Z1_mass', 'ZZCand_Z1mass[bestCandIdx]')
     df = df.Define('Z2_mass', 'ZZCand_Z2mass[bestCandIdx]')
-    df = df.Define('j1_pt' , 'Jet_pt[JetLeadingIdx]')
-    df = df.Define('j2_pt' , 'Jet_pt[JetSubleadingIdx]')
-    df = df.Define('j1_eta', 'Jet_eta[JetLeadingIdx]')
-    df = df.Define('j2_eta', 'Jet_eta[JetSubleadingIdx]')
+
+    df = df.Define('Jetclean_idx', 'idx_equal(Jet_ZZMask, 0)')
+    df = df.Define('Jetclean_pt', 'fill_with_indexes(Jet_pt, Jetclean_idx)')
+    df = df.Define('Jetpt50_idx', 'return idx_passingT<float>(Jetclean_pt, [](float f){ return f > 50.; })')
+    df = df.Define('nJetpt50'   , 'Jetpt50_idx.size()');
+    for var in ('pt', 'eta', 'phi', 'mass'):
+        df = df.Define('Jetpt50_%s'%(var), 'fill_with_indexes(Jet_%s, Jetpt50_idx)'%(var))
+        for i in (0,1):
+            df = df.Define('j%d_%s' %(i+1, var), 'Jetpt50_%s[%d]' %(var, i))
+
     df = df.Define('absdetajj', 'fabs(j1_eta-j2_eta)')
 
     # Final State, Lepton Flavour Order (ie 2e2mu != 2mu2e)
@@ -163,7 +169,8 @@ def analyze(df, args):
                    +'}')
     df = df.Define('ZZ_Lepton_pt', 'fill_with_indexes(Lepton_pt, ZZ_Lepton_idx)')
 
-    df = df.Define('ZZ_Muon_idx', 'filter_abs_pdgId(ZZ_Lepton_idx, Lepton_pdgId, 13)')
+    df = df.Define('Lepton_absPdgId', 'return Map(Lepton_pdgId, [](int id){ return abs(id); })')
+    df = df.Define('ZZ_Muon_idx', 'idx_subvec_equal(Lepton_absPdgId, ZZ_Lepton_idx, 13)')
     df = df.Define('ZZ_Muon_pt', 'fill_with_indexes(Lepton_pt, ZZ_Muon_idx)')
     df = df.Define('ZZ_Muon_eta', 'fill_with_indexes(Lepton_eta, ZZ_Muon_idx)')
     df = df.Define('ZZ_leadingMu_pt', 'ZZ_Muon_pt.size() > 0 ? ZZ_Muon_pt[0] : -1.')
@@ -174,15 +181,9 @@ def analyze(df, args):
     df = df.Define('ZZ_Muon_mvaLowPt', 'fill_with_indexes(Muon_mvaLowPt, ZZ_Muon_idxMuon)')
     df = df.Define('ZZ_Muon_minmvaLowPt', 'ZZ_Muon_mvaLowPt.size() > 0? *std::min_element(ZZ_Muon_mvaLowPt.begin(), ZZ_Muon_mvaLowPt.end()) : 1.')
 
-    futures.append(mkhist(df, 'ZZ_leadingMu_pt', ';leading #mu p_{T} [GeV]', 60,0.,300.))
-    futures.append(mkhist(df, 'ZZ_subleadMu_pt', ';sublead #mu p_{T} [GeV]', 60,0.,300.))
-    futures.append(mkhist(df, 'ZZ_leadingMu_eta', ';leading #mu #eta'      , 50,-2.5,2.5))
-    futures.append(mkhist(df, 'ZZ_subleadMu_eta', ';sublead #mu #eta'      , 50,-2.5,2.5))
-    futures.append(mkhist(df, 'ZZ_Muon_minmvaLowPt', ';min(#mu MVA)'       , 40,-1.,1.))
-
     # mjj
-    kinj1 = ['Jet_%s[JetLeadingIdx]'   %(var) for var in ('pt', 'eta', 'phi', 'mass')]
-    kinj2 = ['Jet_%s[JetSubleadingIdx]'%(var) for var in ('pt', 'eta', 'phi', 'mass')]
+    kinj1 = ['j1_%s' %(var) for var in ('pt', 'eta', 'phi', 'mass')]
+    kinj2 = ['j2_%s' %(var) for var in ('pt', 'eta', 'phi', 'mass')]
     df = df.Define('mj1j2' , 'sum_M_mass(' + ', '.join(kinj1 + kinj2) + ')')
 
     # MELA probabilities (automatic from the branch names)
@@ -205,9 +206,7 @@ def analyze(df, args):
     # futures.append(mkhist(df, 'incl_nJets', ';# jets', 10,-0.5,9.5, v='nCleanedJetsPt30'))
 
     ### Selection
-    # df = df.Filter(*['ZZ_mass > 100']*2)
-    # df = df.Filter(*['ZZ_mass < 340']*2)
-    df = df.Filter(*['nCleanedJetsPt30 >= 2']*2)
+    df = df.Filter(*['nJetpt50 >= 2']*2)
     df = df.Filter(*['mj1j2 > 120']*2)
 
     ### Histograms
@@ -232,7 +231,7 @@ def analyze(df, args):
         df_ch = df.Filter('FSLFO==%d' %(fs.value))
         fsname = fs.name.replace('fs','')
         fstitle= fsname.replace('mu','#mu').strip()
-        futures.append(mkhist(df_ch, 'ZZ_mass_%s'%(fsname), ';m_{ZZ} [GeV], %s'%(fstitle), 60,0,1200, v='ZZ_mass'))
+        futures.append(mkhist(df_ch, 'ZZ_mass_%s'%(fsname), ';m_{ZZ} [GeV], %s'%(fstitle), 60,0,600, v='ZZ_mass')) #1200
         # for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
         #     futures.append(mkhist(df_ch, '%s_pt_%s' %(Zxlx, fsname), ';%s p_{T} [GeV], %s'%(Zxlx, fstitle), 60,0,600, v='%s_pt'     %(Zxlx)))
         #     futures.append(mkhist(df_ch, '%s_eta_%s'%(Zxlx, fsname), ';%s #eta, %s'       %(Zxlx, fstitle), 60,-3,3., v='%s_eta'    %(Zxlx)))
@@ -254,7 +253,7 @@ def analyze(df, args):
 
 def define_histograms(df, prefix=''):
     futures = []
-    futures.append(mkhist(df, prefix+'ZZ_mass'  , ';m_{ZZ} [GeV]'      ,60,  0,1200, v='ZZ_mass'  ))
+    futures.append(mkhist(df, prefix+'ZZ_mass'  , ';m_{ZZ} [GeV]'      ,60,  0, 600, v='ZZ_mass'  )) #1200
     futures.append(mkhist(df, prefix+'ZZ_KD'    , ';KD'                ,50,  0,   1, v='ZZ_KD'    ))
     futures.append(mkhist(df, prefix+'Z1_mass'  , ';m_{Z1} [GeV]'      ,60, 60, 120, v='Z1_mass'  ))
     futures.append(mkhist(df, prefix+'Z2_mass'  , ';m_{Z2} [GeV]'      ,60, 60, 120, v='Z2_mass'  ))
@@ -264,9 +263,16 @@ def define_histograms(df, prefix=''):
     futures.append(mkhist(df, prefix+'FSLFO'    , ';Final state'       , 4,  0,   4, v='FSLFO'    ))
     futures.append(mkhist(df, prefix+'mj1j2'    , ';m_{j1 j2}'         ,60,  0,1200, v='mj1j2'    ))
     futures.append(mkhist(df, prefix+'nJets'    , ';# jets'            ,10,-.5, 9.5, v='nCleanedJetsPt30'))
+    futures.append(mkhist(df, prefix+'nJetpt50',';# jets (p_{T}^{j} > 50)',10,-.5, 9.5, v='nJetpt50'))
     for prob in ('EWK', 'QCD'):
         futures.append(mkhist(df, prefix+'MELA_'+prob+'_log', ';log(P(%s))'%(prob), 50,-50, 0, v='P_%s_log'%(prob)))
     futures.append(mkhist (df, prefix+'ratio_EW_EWpQCD', ';P_{EW}/(P_{EW}+P_{QCD})', 50, 0, 1, v='ratio_EW_EWpQCD'))
+
+    futures.append(mkhist(df, prefix+'ZZ_leadingMu_pt'    , ';leading #mu p_{T} [GeV]', 60, 0. ,300., v='ZZ_leadingMu_pt'    ))
+    futures.append(mkhist(df, prefix+'ZZ_subleadMu_pt'    , ';sublead #mu p_{T} [GeV]', 60, 0. ,300., v='ZZ_subleadMu_pt'    ))
+    futures.append(mkhist(df, prefix+'ZZ_leadingMu_eta'   , ';leading #mu #eta'       , 48,-2.4, 2.4, v='ZZ_leadingMu_eta'   ))
+    futures.append(mkhist(df, prefix+'ZZ_subleadMu_eta'   , ';sublead #mu #eta'       , 48,-2.4, 2.4, v='ZZ_subleadMu_eta'   ))
+    futures.append(mkhist(df, prefix+'ZZ_Muon_minmvaLowPt', ';min(#mu MVA)'           , 40,-1. , 1. , v='ZZ_Muon_minmvaLowPt'))
 
     return futures
 

@@ -1,6 +1,7 @@
 #ifndef ZZVBS_HELPERS
 #define ZZVBS_HELPERS
 
+#include <functional> /* std::function<> */
 #include "ROOT/RVec.hxx"
 
 float
@@ -11,18 +12,33 @@ float
 sum_E_mass(float, float, float, float,
 	   float, float, float, float);
 
-ROOT::RVecF
-sort_ascending(const ROOT::RVecF &src);
+/* Get the indexes of elements passing a condition */
+template<class T>
+ROOT::RVecI
+idx_passingT(const ROOT::VecOps::RVec<T>& vec, std::function<bool(T)>);
 
-ROOT::RVecF
-sort_descending(const ROOT::RVecF &src);
+/* Same, but consider only elements with index in subidxs */
+template<class T>
+ROOT::RVecI
+idx_passing_subvecT(const ROOT::VecOps::RVec<T>& vec, const ROOT::RVecI& subidxs, std::function<bool(T)> f);
 
-ROOT::RVecF
-filter_pdgId(const ROOT::RVecF &v_idx, const ROOT::RVecI &v_id, int id);
+/* Get the indexes of elements equal to a value */
+ROOT::RVecI
+idx_equal(const ROOT::RVecI& vec, int value);
 
-ROOT::RVecF
-filter_abs_pdgId(const ROOT::RVecF &v_idx, const ROOT::RVecI &v_id, int id);
+/* Same, in a subvector of indexes */
+ROOT::RVecI
+idx_subvec_equal(const ROOT::RVecI& vec, const ROOT::RVecI& subidxs, int value);
 
-ROOT::RVecF
-fill_with_indexes(const ROOT::RVecF &src, const ROOT::RVecI &v_idx);
+template<class T>
+ROOT::VecOps::RVec<T>
+fill_with_indexes(const ROOT::VecOps::RVec<T> &src, const ROOT::RVecI &v_idx);
+
+int
+debug_print_vecF(const ROOT::RVecF &v, int);
+int
+debug_print_vecI(const ROOT::RVecI &v, int);
+
+int
+debug_print_F(float, int);
 #endif

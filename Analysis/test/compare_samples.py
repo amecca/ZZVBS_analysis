@@ -15,7 +15,7 @@ import ROOT
 import cmsstyle
 
 from ZZVBS_analysis.Analysis.plotutils import VarInfo, SampleHandle, \
-    TH1_integr_and_err, cmsDiCanvas_fromTH1, getTAxisLimits
+    TH1_integr_and_err, cmsDiCanvas_fromObjs, getTAxisLimits
 from ZZVBS_analysis.Analysis.utils import lumi_dict
 
 
@@ -52,8 +52,8 @@ def plot_compare(key:str, sample1:SampleHandle, sample2:SampleHandle, **kwargs):
     h1 = sample1.get_hist(key)
     h2 = sample2.get_hist(key)
     
-    if(h1.Integral(0,-1) == 0 and h2.Integral(0,-1) == 0):
-        logging.info('- %s: both hists are empty; skipping', key)
+    if(not h1 or h1.Integral(0,-1) == 0 or not h2 or h2.Integral(0,-1) == 0):
+        logging.info('- %s: one or both hists are empty; skipping', key)
         return
 
     if(kwargs.get('norm', False)):
@@ -78,6 +78,9 @@ def plot_compare(key:str, sample1:SampleHandle, sample2:SampleHandle, **kwargs):
     h2.SetTitle(sample2.title)
     h1.SetLineColor(kwargs['color1'])
     h2.SetLineColor(kwargs['color2'])
+    if(key != 'FSLFO' and (not 'njets' in key.lower())):
+        h1.Rebin(kwargs['rebin'])
+        h2.Rebin(kwargs['rebin'])
 
     ratio = ROOT.TGraphAsymmErrors()
     ratio.SetName('ratio 2/1')
@@ -90,15 +93,15 @@ def plot_compare(key:str, sample1:SampleHandle, sample2:SampleHandle, **kwargs):
     # for n in range(ratio.GetN())  : logging.debug('  %2d: (%.3g, %.3g)', n, ratio.GetPointX(n), ratio.GetPointY(n))
     if(kwargs.get('logy', False)):
         y_scale = 10
-        y_min = 1e-2
+        y_min = max(1e-2, h1.GetMinimum())/3
     else:
         y_scale = 1.5
         y_min = 0
 
     dicanvas_kwargs = dict(y_min=y_min, y_scale=y_scale, min_hi_r=1.1, max_lo_r=0.9, range_include_err=True,
-                           max_hi_r=1.2, min_lo_r=0.8,
+                           max_hi_r=4, min_lo_r=0.,
                            iPos=11)
-    canvas = cmsDiCanvas_fromTH1(key, h1, ratio,
+    canvas = cmsDiCanvas_fromObjs(key, h1, None, ratio,
                                  **dicanvas_kwargs)
 
     ### Upper pad ###
@@ -109,8 +112,8 @@ def plot_compare(key:str, sample1:SampleHandle, sample2:SampleHandle, **kwargs):
     leg_ymax = .875
     leg_ymin = leg_ymax - 0.05*(2)
     legend = cmsstyle.cmsLeg(.55, leg_ymin, .90, leg_ymax, textSize=.04)
-    legend.AddEntry(h1, sample1.title, 'f')
-    legend.AddEntry(h2, sample2.title, 'f')
+    legend.AddEntry(h1, sample1.title, 'f') #+' (%+.1e +- %.1e)' %(v1, e1)
+    legend.AddEntry(h2, sample2.title, 'f') #+' (%+.1e +- %.1e)' %(v2, e2)
 
     # Draw
     h1.Draw('SAMEHIST')
@@ -149,6 +152,7 @@ def parse_args():
     parser.add_argument(      '--scale2', default=1., type=float, help='global k-factor for sample 2')
     parser.add_argument(      '--norm'  , action='store_true', help='Normalize both 1 and 2 so that the integral is 1')
     parser.add_argument(      '--logy'  , action='store_true')
+    parser.add_argument(      '--rebin' , type=int, default=1)
     parser.add_argument('-o', '--outdir', default='comparesamples', metavar='DIR', help='Directory where plots will be saved. Default: %(default)s')
     parser.add_argument('-y', '--year', default='2022EE', help='Used to get lumi information')
     parser.add_argument('--log', dest='loglevel', metavar='LEVEL', default='WARNING', help='Level for the python logging module. Can be either a mnemonic string like DEBUG, INFO or WARNING or an integer (lower means more verbose).')

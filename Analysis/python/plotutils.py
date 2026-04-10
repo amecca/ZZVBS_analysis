@@ -4,6 +4,19 @@ import logging
 import ROOT
 import cmsstyle
 
+
+DRAW_STYLE = {
+    'data'       : dict(opt='PE', LineColor=ROOT.kBlack, MarkerStyle=20 , LineWidth=1, MarkerSize=1.0),
+    'MCerr'      : dict(opt='E2', FillStyle=3345, FillColor=ROOT.kGray+3, LineWidth=0, MarkerSize=0  ),
+    'ref_ratio_l': dict(lcolor=ROOT.kBlack, lstyle=ROOT.kDotted),
+    'labels': {
+        'data': 'Data',
+        'MCerr': 'Stat. only',
+    }
+}
+DRAW_STYLE['ratio'] = {**DRAW_STYLE['data'], 'opt':'PZ'}
+
+
 class VarInfo:
     '''
     Information related to a vertain variable to be plotted:
@@ -34,11 +47,13 @@ class SampleInfo:
     Metadata about a sample: info about how to plot, which files to use, etc.
     '''
     def __init__(self, name, fpaths: list[str], title: str, color: str,
+                 kfactor: float=1.,
                  **kwargs):
         self.name = name
         self.title = title
         self.color = color
         self.fpaths = fpaths
+        self.kfactor = kfactor
 
 
 class SampleHandle(SampleInfo):
@@ -93,16 +108,20 @@ def add_list_TObj(*args):
     return result
 
 
-def cmsDiCanvas_fromTH1(name, h, r, y_scale=1, range_include_err=False, **kwargs):
+def cmsDiCanvas_fromObjs(name, hMC, data, r, y_scale=1, range_include_err=False, **kwargs):
     '''Helper that defines reasonable ranges when creating a cmsDiCanvas object'''
     cmsargs = dict()
-    x_min, x_max = getTAxisLimits(h.GetXaxis())
+    x_min, x_max = getTAxisLimits(hMC.GetXaxis())
     cmsargs['x_min'] = kwargs.get('x_min', x_min)
     cmsargs['x_max'] = kwargs.get('x_max', x_max)
 
-    cmsargs['y_min'] = kwargs.get('y_min', h.GetMinimum())
-    cmsargs['y_max'] = kwargs.get('y_max', h.GetMaximum()*y_scale)
+    # Upper pad
+    objs_y_min = min(hMC.GetMinimum(), data.GetMinimum()) if data is not None else hMC.GetMinimum()
+    objs_y_max = max(hMC.GetMaximum(), data.GetMaximum()) if data is not None else hMC.GetMaximum()
+    cmsargs['y_min'] = kwargs.get('y_min', objs_y_min)
+    cmsargs['y_max'] = kwargs.get('y_max', objs_y_max*y_scale)
 
+    # Lower pad
     r_min, r_max = 0, 2 # default values
     if(not ('r_min' in kwargs and 'r_max' in kwargs)):
         for argname in ('y_scale', 'min_lo', 'max_lo', 'min_hi', 'max_hi'):
@@ -115,8 +134,8 @@ def cmsDiCanvas_fromTH1(name, h, r, y_scale=1, range_include_err=False, **kwargs
     r_min = kwargs.get('r_min', r_min)
     r_max = kwargs.get('r_max', r_max)
 
-    cmsargs['nameXaxis'] = kwargs.get('nameXaxis', h.GetXaxis().GetTitle())
-    cmsargs['nameYaxis'] = kwargs.get('nameYaxis', h.GetYaxis().GetTitle())
+    cmsargs['nameXaxis'] = kwargs.get('nameXaxis', hMC.GetXaxis().GetTitle())
+    cmsargs['nameYaxis'] = kwargs.get('nameYaxis', hMC.GetYaxis().GetTitle())
     cmsargs['nameRatio'] = kwargs.get('nameRatio', r.GetYaxis().GetTitle())
     if('iPos' in kwargs): cmsargs['iPos'] = kwargs['iPos']
 
