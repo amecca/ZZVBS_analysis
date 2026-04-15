@@ -102,6 +102,15 @@ template ROOT::VecOps::RVec<float> fill_with_indexes<float>(const ROOT::VecOps::
 template ROOT::VecOps::RVec<int  > fill_with_indexes<int  >(const ROOT::VecOps::RVec<int  >&, const ROOT::RVecI&);
 
 
+template<class T>
+ROOT::VecOps::RVec<T>
+concat(const ROOT::VecOps::RVec<T>& lhs, const ROOT::VecOps::RVec<T>& rhs) {
+  auto out {lhs};
+  out.append(rhs.begin(), rhs.end());
+  return out;
+}
+
+
 int
 debug_print_vecF(const ROOT::RVecF &vec, int name){
   for(size_t i = 0; i < vec.size(); ++i)

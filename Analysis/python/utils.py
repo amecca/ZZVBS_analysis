@@ -100,16 +100,15 @@ def write_resultmap(hdict):
         if(k == "nominal"):
             continue
         syst, updn = str(k).split(':')
-        syst = syst.replace('_', '-')
-        outn = '{basename}_{syst}_{updn}'.format(basename=basename, syst=syst, updn=updn)
+        outn = '{basename}-{syst}-{updn}'.format(basename=basename, syst=syst, updn=updn)
         logging.debug('    %s -> (%s, %s) -> %s', k, syst, updn, outn)
         hdict[k].Write(outn)
 
 
 def parse_syst_name(name):
-    s = name.split('_')
+    s = name.split('-')
     d = {
-        'var' : '_'.join(s[:-2]),
+        'var' : '-'.join(s[:-2]),
         'syst': s[-2],
         'updn': s[-1]
         }

@@ -13,13 +13,21 @@ from argparse import ArgumentParser, Namespace
 import logging
 from time import time
 import math
+import re
 
 import ROOT
 
 from ZZAnalysis.NanoAnalysis.tools import setConf
 
-from ZZVBS_analysis.Analysis.utils import TFileContext, mkhist, FinalState, lumi_dict
+from ZZVBS_analysis.Analysis.utils import TFileContext, mkhist, FinalState \
+    , lumi_dict, write_resultmap
 from ZZVBS_analysis.Analysis.libutils import find_load_lib
+
+
+VariationsFor = ROOT.RDF.Experimental.VariationsFor
+
+class RResultMapEmulator(dict):
+    def GetKeys(self): return self.keys()
 
 
 def main(args):
@@ -49,37 +57,32 @@ def main(args):
         genEventSumw = df_runs.Sum('genEventSumw').GetValue()
         logging.info('genEventSumw: %g', genEventSumw)
         lumi = lumi_dict[args.year]['value']
-        df = df.Define('weight', 'overallEventWeight * ZZCand_dataMCWeight[bestCandIdx] * %f' %(lumi/genEventSumw))
+        df = df.Define('weight', '(double) overallEventWeight * ZZCand_dataMCWeight[bestCandIdx] * %f' %(lumi/genEventSumw))
     else:
-        df = df.Define('weight', '1')
+        df = df.Define('weight', '(double)1.')
 
     # Run the analysis
     t_start = time()
     histograms = analyze(df, args)
+    hmaps = []
+    re_skip_syst = re.compile('Z[12]l[12]_')
+    for hist in histograms:
+        hname = hist.GetName()
+        # skip variations for some histograms
+        if(re_skip_syst.search(hname)):
+            logging.debug('skipping systs for "%s"', hname)
+            hmap = RResultMapEmulator(nominal=hist)
+        else:
+            hmap = VariationsFor(hist)
+        hmaps.append(hmap)
+
     t_end = time()
     logging.info('Time elapsed: %.3g s', t_end-t_start)
 
     # Write histograms
     with TFileContext(args.fname_out, 'RECREATE') as tf_out:
-        for hist in histograms:
-            hname = hist.GetName()
-
-            path_elems = hname.split('/')
-            path_elems.reverse()
-            curdir = tf_out
-            logging.debug('h name: %s -> %s', hname, path_elems)
-            while(len(path_elems) > 1):
-                dirname = path_elems.pop()
-                logging.debug('    making dir "%s"', dirname)
-                curdir = curdir.mkdir(dirname)
-                curdir.cd()
-            basename = path_elems.pop()
-
-            if('FSLFO' in hname): fix_xlabels_FSLFO(hist)
-    
-            hist.Write(basename)
-            logging.debug('wrote "%s"', basename)
-            tf_out.cd()
+        for hmap in hmaps:
+            write_resultmap(hmap)
     logging.info('wrote %d histograms to "%s"', len(histograms), args.fname_out)
 
     ROOT.RDF.SaveGraph(df, './nano2hists.dot')
@@ -131,10 +134,27 @@ def analyze(df, args):
         logging.info('Filtered entries: %d', max_entries)
 
     futures = [] # <ROOT.RDF.RResultPtr>
-    histograms = [] # <ROOT.TH1F>
 
     ### Pre-selection for SR4P
     df = df.Filter(*['nZZCand > 0']*2)
+
+    ### Systematics, called before definitions ###
+    if(args.is_MC):
+        df = df.Vary('weight', 'ROOT::RVecD{weight*puWeightDn/puWeight, weight*puWeightUp/puWeight}', ['Dn', 'Up'], 'CMS_pileup')
+
+        # # JES, JER
+        for var in ('pt', 'mass'):
+            df = df.Vary('Jet_%s'%(var), 'ROOT::VecOps::RVec<ROOT::RVecF>{Jet_scaleDn_%s, Jet_scaleUp_%s}'%(var,var), ['Dn', 'Up'], 'CMS_scale_j')
+            df = df.Vary('Jet_%s'%(var), 'ROOT::VecOps::RVec<ROOT::RVecF>{Jet_smearDn_%s, Jet_smearUp_%s}'%(var,var), ['Dn', 'Up'], 'CMS_res_j')
+
+        # Lepton pt scale and resolution
+        for var in ('scaleDn_pt', 'scaleUp_pt', 'smearDn_pt', 'smearUp_pt'):
+            df = df.Define('Lepton_%s'%(var), 'concat(Electron_%s, Muon_%s)'%(var, var))
+
+        for flav in ('Electron', 'Muon', 'Lepton'):
+            initial = flav.lower()[0]
+            df = df.Vary('%s_pt'%(flav), 'ROOT::VecOps::RVec<ROOT::RVecF>{%s_scaleDn_pt, %s_scaleUp_pt}'%(flav,flav), ['Dn', 'Up'], 'CMS_scale_%s'%(initial))
+            df = df.Vary('%s_pt'%(flav), 'ROOT::VecOps::RVec<ROOT::RVecF>{%s_smearDn_pt, %s_smearUp_pt}'%(flav,flav), ['Dn', 'Up'], 'CMS_res_%s'  %(initial))
 
     ### Aliases and definitions
     df = df.Define('ZZ_mass', 'ZZCand_mass[bestCandIdx]')
@@ -210,6 +230,8 @@ def analyze(df, args):
     df = df.Filter(*['mj1j2 > 120']*2)
 
     ### Histograms
+    futures.append(mkhist(df, 'weight', ';weight', 50,-5.,5.))
+
     futures.extend( define_histograms(df         , prefix='') )
     df_VBSincl  = df         .Filter(*['ZZ_mass > 180']*2)
     futures.extend( define_histograms(df_VBSincl , prefix='VBSincl-') )
@@ -244,11 +266,10 @@ def analyze(df, args):
     logging.info("Finished setting up the analysis")
 
     # Calling GetValue() on a RResultPtr causes the event loop to run
-    histograms = [f.GetValue() for f in futures]
     df.Report().GetValue().Print()
     logging.info('Events with MELA==0 / total: %d/%d', n_zeroMELA.GetValue(), n_total.GetValue())
 
-    return histograms
+    return futures
 
 
 def define_histograms(df, prefix=''):

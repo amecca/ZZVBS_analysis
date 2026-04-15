@@ -34,6 +34,10 @@ template<class T>
 ROOT::VecOps::RVec<T>
 fill_with_indexes(const ROOT::VecOps::RVec<T> &src, const ROOT::RVecI &v_idx);
 
+template<class T>
+ROOT::VecOps::RVec<T>
+concat(const ROOT::VecOps::RVec<T>& lhs, const ROOT::VecOps::RVec<T>& rhs);
+
 int
 debug_print_vecF(const ROOT::RVecF &v, int);
 int
