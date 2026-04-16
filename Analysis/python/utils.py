@@ -92,10 +92,31 @@ def write_resultmap(hdict):
     Write every histogram in the RResultMap passed as argument to the currently
     opened TFile (assuming that cd() has already been called)
     '''
+    tf_out = ROOT.TFile.CurrentFile()
+    if(not tf_out):
+        raise RuntimeError('No TFile is currently open')
+
     logging.debug('keys: %s', hdict.GetKeys())
     hcentr = hdict['nominal']
-    hcentr.Write()
-    basename = hcentr.GetName()
+    hname = hcentr.GetName()
+    path_elems = hname.split('/')
+    basename = path_elems[-1]
+    logging.debug('central name: %s -> %s', hname, path_elems)
+
+    # Optional: create subdirectories in the tf
+    path_elems.reverse()
+    curdir = tf_out
+    while(len(path_elems) > 1):
+        dirname = path_elems.pop()
+        if(curdir.cd(dirname)):
+            continue
+        logging.debug('    making dir "%s"', dirname)
+        curdir = curdir.mkdir(dirname)
+        curdir.cd()
+
+    # Write histograms
+    hcentr.Write('%s-nominal'%(basename))
+
     for k in hdict.GetKeys():
         if(k == "nominal"):
             continue
@@ -103,6 +124,9 @@ def write_resultmap(hdict):
         outn = '{basename}-{syst}-{updn}'.format(basename=basename, syst=syst, updn=updn)
         logging.debug('    %s -> (%s, %s) -> %s', k, syst, updn, outn)
         hdict[k].Write(outn)
+
+    # Reset the current directory
+    tf_out.cd()
 
 
 def parse_syst_name(name):
