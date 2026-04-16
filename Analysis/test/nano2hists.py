@@ -234,13 +234,13 @@ def analyze(df, args):
 
     futures.extend( define_histograms(df         , prefix='') )
     df_VBSincl  = df         .Filter(*['ZZ_mass > 180']*2)
-    futures.extend( define_histograms(df_VBSincl , prefix='VBSincl-') )
+    futures.extend( define_histograms(df_VBSincl , prefix='VBSincl/') )
     df_mjj400   = df_VBSincl .Filter(*['mj1j2 > 400']*2)
-    futures.extend( define_histograms(df_mjj400  , prefix='mZZ180-mjj400-') )
+    futures.extend( define_histograms(df_mjj400  , prefix='mZZ180-mjj400/') )
     df_VBSloose = df_mjj400  .Filter(*['absdetajj > 2.4']*2)
-    futures.extend( define_histograms(df_VBSloose, prefix='VBSloose-') )
+    futures.extend( define_histograms(df_VBSloose, prefix='VBSloose/') )
     df_VBStight = df_VBSloose.Filter(*['mj1j2 > 1000']*2)
-    futures.extend( define_histograms(df_VBStight, prefix='VBStight-') )
+    futures.extend( define_histograms(df_VBStight, prefix='VBStight/') )
 
     for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
         futures.append(mkhist(df, '%s_pt' %(Zxlx),    ';%s p_{T} [GeV]'%(Zxlx), 60,0.,600., v='%s_pt'     %(Zxlx)))
