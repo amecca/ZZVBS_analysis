@@ -1,6 +1,7 @@
 # Utiltiies, constants and enums
 from enum import Enum
 import logging
+import os
 import ROOT
 
 from ROOT.RDF import TH1DModel
@@ -127,6 +128,34 @@ def write_resultmap(hdict):
 
     # Reset the current directory
     tf_out.cd()
+
+
+class TKeyDeep():
+    'A TKey that returns its full path inside the TFile when using GetName()'
+    def __init__(self, tkey, path: str=''):
+        self.tkey = tkey
+        self.path = path
+        self.name_ = os.path.join(self.path, self.tkey.GetName())
+
+    def GetName(self):
+        return self.name_
+
+    def ReadObj(self):
+        return self.tkey.ReadObj()
+
+
+def get_keys_deep(tf):
+    'Recursively get all the keys in the TFile/TDirectory and it sub-directories'
+    out = []
+    for key in tf.GetListOfKeys():
+        if(key.IsFolder()):
+            out.extend([
+                TKeyDeep(k, path=key.GetName())
+                for k in get_keys_deep(key.ReadObj())
+            ])
+        else:
+            out.append(key)
+    return out
 
 
 def parse_syst_name(name):

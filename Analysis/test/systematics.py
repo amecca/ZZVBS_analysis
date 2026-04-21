@@ -12,7 +12,7 @@ import ROOT
 import cmsstyle
 
 sys.path.append('../../.python')
-from ZZVBS_analysis.Analysis.samples import get_samples_dicts, SampleHandle, InputDir
+from ZZVBS_analysis.Analysis.samples import get_samples_info, SampleInfo, SampleHandle, InputDir
 from ZZVBS_analysis.Analysis.plotutils import TH1_integr_and_err, get_range_tga\
     , clamp_expnd_r, getTAxisLimits
 from ZZVBS_analysis.Analysis.utils import lumi_dict
@@ -68,6 +68,7 @@ def main(args):
 
     hists_folder = InputDir(basedir=args.inputdir, year=args.year) #, region=args.region
     hists_basep = hists_folder.path()
+    logging.debug('hists_basep: %s', hists_basep)
 
     systDBfname = os.path.join(args.output, '%s.json'%(args.year))
     systDB = SystDB()
@@ -82,18 +83,20 @@ def main(args):
     argsdict = vars(args)
 
     # Get the file list for this region
-    #_, s_dicts_MC = get_samples_dicts(args.region)
-    s_dicts_MC = [{'name': 'qqZZ-EWK', 'title': 'ZZjj EWK', 'fnames':['ZZTo4l_2Jets_EW']}]
+    _, s_info_MC = get_samples_info(args.region)
+    s_dicts_MC = [SampleInfo(name='qqZZ-EWK', title='ZZjj EWK', fnames=['ZZTo4l_2Jets_EW'], color=ROOT.kBlack)]
     logging.warning('restore the line above')
 
-    for s_dict in s_dicts_MC:
+    for s_info in s_info_MC:
+        if(args.sample_regex and not args.sample_regex.search(s_info.name)):
+            logging.debug('skipping sample "%s"', s_info.name)
+            continue
         # Get the full path to the file(s) with the histograms
-        s_dict['fpaths'] = [os.path.join(hists_basep, f+'.root') for f in s_dict['fnames']]
-        s_dict['color'] = ROOT.kBlack
-        logging.debug('paths: %s', s_dict['fpaths'])
+
+        logging.debug('files: %s', s_info.fnames)
         # Open the files
         try:
-            s = SampleHandle(**s_dict)
+            s = SampleHandle.from_info(s_info, dirpath=hists_basep)
             new = doSystOnSample(s, **argsdict)
             systDB.deep_update(new)
         except OSError as e:
@@ -114,8 +117,9 @@ def parse_args():
     parser.add_argument('-y', '--year', default='2024', help='Default: %(default)s')
     parser.add_argument('-o', '--output', default='data/systematics', help='Output directory (default: %(default)s)')
     # parser.add_argument('-r', '--region', default='SR4P', help='Default: %(default)s')
-    parser.add_argument('-S', '--syst-regex', default=None, type=re.compile, help='Filter systematics with a regular expression')
-    parser.add_argument('-t', '--var-regex' , default=None, type=re.compile, help='Filter variables with a regular expression')
+    parser.add_argument('-S', '--syst-regex'  , default=None, type=re.compile, help='Filter systematics with a regular expression')
+    parser.add_argument('-s', '--sample-regex', default=None, type=re.compile, help='Filter samples by name with a regex')
+    parser.add_argument('-t', '--var-regex'   , default=None, type=re.compile, help='Filter variables with a regular expression')
     parser.add_argument(      '--no-update', action='store_false', dest='do_update', help='Do not write back to the syst DB file')
     parser.add_argument('--log', dest='loglevel', metavar='LEVEL', default='INFO')
     args = parser.parse_args()
@@ -265,6 +269,7 @@ def plot_syst(hCe, hUp, hDn, yields, formatInfo, **kwargs):  # <TH1>, <TH1>, <TH
     cmsstyle.cmsObjectDraw(hRatioDn, "PE", MarkerSize=1., MarkerStyle=ROOT.kFullTriangleDown, LineColor=ROOT.kBlue, MarkerColor=ROOT.kBlue)
 
     for ext in ('png', 'pdf'):
+        formatInfo['var'] = formatInfo['var'].replace('/','-')
         c.SaveAs('plot/systematics/{region}/{year}/{sample}_{var}_{syst}.{ext}'.format(**formatInfo, ext=ext))
     del c
 
@@ -300,8 +305,8 @@ def doSystOnSample(handle, syst_regex=None, var_regex=None, **kwargs):  # <str>,
         logging.debug('\toriginal variables (%d): %s', len(variables), variables)
         logging.debug('\tregex for variables: %s', var_regex.pattern)
         variables   = {s for s in variables   if  var_regex.search(s)}
-        logging.debug('\toriginal variables (%d): %s', len(variables), variables)
-    systematics = set([n.split('-')[1] for n in names]) - {'nominal'}
+        logging.debug('\tfiltered variables (%d): %s', len(variables), variables)
+    systematics = set([n.split('-')[-2] for n in names]) - {'nominal'}
     if(syst_regex is not None):
         logging.debug('\toriginal systematics (%d): %s', len(systematics), systematics)
         systematics = {s for s in systematics if syst_regex.search(s)}

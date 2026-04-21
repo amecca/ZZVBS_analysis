@@ -23,7 +23,7 @@ from plotutils import VarInfo, \
     DRAW_STYLE, \
     TH1_integr_and_err, cmsDiCanvas_fromObjs, getTAxisLimits
 from utils import lumi_dict
-from samples import SampleInfo, SampleHandle, get_samples_dicts
+from samples import SampleInfo, SampleHandle, get_samples_info
 
 
 ### To be moved to a separate configuration file?
@@ -57,24 +57,22 @@ def main(args: Namespace):
             variables.append(VarInfo(**tmp))
 
     # Open the files that contain the histograms to be plotted
-    dict_data, dicts_MCs = get_samples_dicts(region='4P')
-    dict_data['fpaths'] = [os.path.join(args.inputdir, f+'.root') for f in dict_data['fnames']]
-    sample_data = SampleHandle(**dict_data)
+    info_data, infos_MCs = get_samples_info(region='4P')
+    sample_data = SampleHandle.from_info(info_data, dirpath=args.inputdir)
 
     samples_MC = []
-    for v in dicts_MCs:
-        # Put the absolute path
-        v['fpaths'] = [os.path.join(args.inputdir, f+'.root') for f in v['fnames']]
-
+    for v in infos_MCs:
         if(v is None):
             logging.warning('Missing sample "%s"', name)
             continue
 
-        s = SampleHandle(**v)
+        s = SampleHandle.from_info(v, dirpath=args.inputdir)
         samples_MC.append(s)
 
     # Defaults for non-customized vars:
-    all_keys = {k.GetName() for k in samples_MC[0].files[0].GetListOfKeys()} #for f in samples_MC[0].files for k in f.GetListOfKeys()
+    all_keys = {k.GetName() for k in samples_MC[0].get_keys()}
+    print('\t'+'\n\t'.join(sorted(all_keys)))
+    all_keys = {k for k in all_keys if not k.endswith(('-Up', '-Dn'))}
     new_keys = all_keys - {v.name for v in variables}
     variables.extend([VarInfo(name=n, rebin=args.rebin) for n in new_keys])
 

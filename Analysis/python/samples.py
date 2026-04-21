@@ -8,6 +8,7 @@ import ROOT
 
 sys.path.append('../../.python')
 from ZZVBS_analysis.Analysis.plotutils import TH1_integr_and_err, add_list_TObj
+from ZZVBS_analysis.Analysis.utils import get_keys_deep
 
 SAMPLE_DICTS = {
     'qqZZ-EWK': {'title': 'ZZjj EWK'                         , 'fnames':['ZZTo4l_2Jets_EW']},
@@ -27,13 +28,13 @@ class SampleInfo:
     '''
     Metadata about a sample: info about how to plot, which files to use, etc.
     '''
-    def __init__(self, name, fpaths: list[str], title: str, color: str,
+    def __init__(self, name, fnames: list[str], title: str, color: int,
                  kfactor: float=1.,
                  **kwargs):
         self.name = name
         self.title = title
         self.color = color
-        self.fpaths = fpaths
+        self.fnames = fnames
         self.kfactor = kfactor
 
 
@@ -42,10 +43,13 @@ class SampleHandle(SampleInfo):
     A sample is made of one or more phisical files.
     It holds handles to one or more TFiles and information (e.g. title/label) on how to be ploted.
     '''
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, dirpath:str, **kwargs):
         super().__init__(*args, **kwargs)
+        self.dirpath = dirpath
+
         self.files = []
-        for fpath in self.fpaths:
+        for fname in self.fnames:
+            fpath = os.path.join(self.dirpath, fname+'.root')
             try:
                 f = ROOT.TFile(fpath)
             except OSError as e:
@@ -53,7 +57,10 @@ class SampleHandle(SampleInfo):
             else:
                 logging.debug('sample: %s: opened %s', self.name, fpath)
                 self.files.append(f)
-        # self.kfactor = kwargs.get('kfactor', 1.)
+
+    @classmethod
+    def from_info(cls, info: SampleInfo, dirpath: str):
+        return cls(**vars(info), dirpath=dirpath)
 
     def get_hist(self, hname):
         '''Try to get one histogram named "name" from each of the file, and Add() them together'''
@@ -69,9 +76,12 @@ class SampleHandle(SampleInfo):
         res = add_list_TObj(*hlist)
         return res
 
+    def get_keys(self):
+        return set.union(*[{k for k in get_keys_deep(f)} for f in self.files]
+                         , set()) # this last argument avoids crashing when no key can be retrieved
+
     def GetListOfKeys(self):
-        logging.warning('TODO: use the get_keys_deep from utils.py')
-        return set.union(*[{k for k in f.GetListOfKeys()} for f in self.files])
+        return self.get_keys()
 
 
 class InputDir():
