@@ -19,11 +19,11 @@ import cmsstyle
 
 import sys
 sys.path.append('../python')
-from plotutils import VarInfo, SampleInfo, SampleHandle, \
+from plotutils import VarInfo, \
     DRAW_STYLE, \
     TH1_integr_and_err, cmsDiCanvas_fromObjs, getTAxisLimits
 from utils import lumi_dict
-from samples import get_samples
+from samples import SampleInfo, SampleHandle, get_samples
 
 
 ### To be moved to a separate configuration file?

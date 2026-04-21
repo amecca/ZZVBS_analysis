@@ -14,8 +14,9 @@ from math import log10, ceil, sqrt
 import ROOT
 import cmsstyle
 
-from ZZVBS_analysis.Analysis.plotutils import VarInfo, SampleHandle, \
+from ZZVBS_analysis.Analysis.plotutils import VarInfo, \
     TH1_integr_and_err, cmsDiCanvas_fromObjs, getTAxisLimits
+from ZZVBS_analysis.Analysis.samples import SampleHandle
 from ZZVBS_analysis.Analysis.utils import lumi_dict
 
 

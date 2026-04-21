@@ -42,59 +42,6 @@ class VarInfo:
         self.extra = kwargs
 
 
-class SampleInfo:
-    '''
-    Metadata about a sample: info about how to plot, which files to use, etc.
-    '''
-    def __init__(self, name, fpaths: list[str], title: str, color: str,
-                 kfactor: float=1.,
-                 **kwargs):
-        self.name = name
-        self.title = title
-        self.color = color
-        self.fpaths = fpaths
-        self.kfactor = kfactor
-
-
-class SampleHandle(SampleInfo):
-    '''
-    A sample is made of one or more phisical files.
-    It holds handles to one or more TFiles and information (e.g. title/label) on how to be ploted.
-    '''
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.files = []
-        for fpath in self.fpaths:
-            try:
-                f = ROOT.TFile(fpath)
-            except OSError as e:
-                logging.warning('Could not open file %s', fpath)
-            else:
-                logging.debug('sample: %s: opened %s', self.name, fpath)
-                self.files.append(f)
-        # self.kfactor = kwargs.get('kfactor', 1.)
-
-    def get_hist(self, hname):
-        '''Try to get one histogram named "name" from each of the file, and Add() them together'''
-        hlist = []
-        for f in self.files:
-            h = f.Get(hname)
-            integr, error = TH1_integr_and_err(h)
-            logging.debug('%-20.20s: %+.3g += %.3g',
-                          os.path.basename(f.GetName()).replace('.root',''),
-                          integr, error)
-            hlist.append(h)
-
-        res = add_list_TObj(*hlist)
-        return res
-
-    def __del__(self):
-        try:
-            for f in self.files:
-                if(f and f.IsOpen()): f.Close()
-        except AttributeError: pass
-
-
 def add_list_TObj(*args):
     '''
     Add() a list of TObjects, starting from the first non-None
