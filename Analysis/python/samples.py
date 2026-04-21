@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import logging
 import cmsstyle
 import ROOT
@@ -68,6 +69,15 @@ class SampleHandle(SampleInfo):
         logging.warning('TODO: use the get_keys_deep from utils.py')
         return set.union(*[{k for k in f.GetListOfKeys()} for f in self.files])
 
+
+class InputDir():
+    'Standardize how to find histograms'
+    def __init__(self, basedir, year):
+        self.basedir = basedir
+        self.year = year
+
+    def path(self):
+        return os.path.join(self.basedir, self.year)
 
 
 def get_samples(region: str='4P'):
