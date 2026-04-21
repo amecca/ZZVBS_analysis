@@ -1,1 +1,1 @@
-cmsstyle>=0.4.3
+cmsstyle>=0.5.0
