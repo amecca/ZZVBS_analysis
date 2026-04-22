@@ -12,7 +12,7 @@ import ROOT
 import cmsstyle
 
 sys.path.append('../../.python')
-from ZZVBS_analysis.Analysis.samples import get_samples, SampleHandle, InputDir
+from ZZVBS_analysis.Analysis.samples import get_samples_dicts, SampleHandle, InputDir
 from ZZVBS_analysis.Analysis.plotutils import TH1_integr_and_err, get_range_tga\
     , clamp_expnd_r, getTAxisLimits
 from ZZVBS_analysis.Analysis.utils import lumi_dict
@@ -82,8 +82,7 @@ def main(args):
     argsdict = vars(args)
 
     # Get the file list for this region
-    #samples_dicts = get_samples('4P') #(args.region)
-    #s_dicts_MC = samples_dicts[1:]
+    #_, s_dicts_MC = get_samples_dicts(args.region)
     s_dicts_MC = [{'name': 'qqZZ-EWK', 'title': 'ZZjj EWK', 'fnames':['ZZTo4l_2Jets_EW']}]
     logging.warning('restore the line above')
 

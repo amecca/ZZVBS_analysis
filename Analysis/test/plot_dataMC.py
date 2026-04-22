@@ -23,7 +23,7 @@ from plotutils import VarInfo, \
     DRAW_STYLE, \
     TH1_integr_and_err, cmsDiCanvas_fromObjs, getTAxisLimits
 from utils import lumi_dict
-from samples import SampleInfo, SampleHandle, get_samples
+from samples import SampleInfo, SampleHandle, get_samples_dicts
 
 
 ### To be moved to a separate configuration file?
@@ -57,10 +57,12 @@ def main(args: Namespace):
             variables.append(VarInfo(**tmp))
 
     # Open the files that contain the histograms to be plotted
-    sample_dicts = get_samples(region='4P') # [{data}, {MC0}, {MC1}, ...]
+    dict_data, dicts_MCs = get_samples_dicts(region='4P')
+    dict_data['fpaths'] = [os.path.join(args.inputdir, f+'.root') for f in dict_data['fnames']]
+    sample_data = SampleHandle(**dict_data)
+
     samples_MC = []
-    sample_data = None
-    for v in sample_dicts:
+    for v in dicts_MCs:
         # Put the absolute path
         v['fpaths'] = [os.path.join(args.inputdir, f+'.root') for f in v['fnames']]
 
@@ -69,8 +71,7 @@ def main(args: Namespace):
             continue
 
         s = SampleHandle(**v)
-        if v['name'] == 'data': sample_data = s
-        else: samples_MC.append(s)
+        samples_MC.append(s)
 
     # Defaults for non-customized vars:
     all_keys = {k.GetName() for k in samples_MC[0].files[0].GetListOfKeys()} #for f in samples_MC[0].files for k in f.GetListOfKeys()

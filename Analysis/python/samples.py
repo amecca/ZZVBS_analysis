@@ -84,7 +84,7 @@ class InputDir():
         return os.path.join(self.basedir, self.year)
 
 
-def get_samples(region: str='4P'):
+def get_samples_dicts(region: str='4P'):
     MC_names = ['qqZZ-EWK', 'qqZZ-1J', 'ggZZ', 'rare', 'ZX'] #, 'qqZZ-QCD', 'qqZZ-int', 'qqZZ-1J']
     MCs = [{'name':k, **SAMPLE_DICTS[k]} for k in MC_names]
 
@@ -94,4 +94,11 @@ def get_samples(region: str='4P'):
     for i, v in enumerate(MCs):
         v['color'] = palette[i]
 
-    return [DATA] + MCs
+    return DATA, MCs
+
+
+def get_samples_info(region: str='4P'):
+    d_data, d_MCs = get_samples_dicts(region)
+    data = SampleInfo(**d_data)
+    MCs = [SampleInfo(**d_MC) for d_MC in d_MCs]
+    return data, MCs
