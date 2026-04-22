@@ -1,6 +1,7 @@
 import os
 from ctypes import c_double
 import logging
+from array import array
 import ROOT
 import cmsstyle
 
