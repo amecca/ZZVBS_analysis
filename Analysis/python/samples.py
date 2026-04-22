@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import logging
 import cmsstyle
 import ROOT
+
+sys.path.append('../../.python')
+from ZZVBS_analysis.Analysis.plotutils import TH1_integr_and_err, add_list_TObj
 
 SAMPLE_DICTS = {
     'qqZZ-EWK': {'title': 'ZZjj EWK'                         , 'fnames':['ZZTo4l_2Jets_EW']},
