@@ -125,6 +125,7 @@ def parse_args():
 
 
 def analyze(df, args):
+    year_int = int(args.year[:4])
     tot_entries = df.Count().GetValue()
     logging.info(    'Total entries   : %d', tot_entries)
 
@@ -162,14 +163,16 @@ def analyze(df, args):
     df = df.Define('Z1_mass', 'ZZCand_Z1mass[bestCandIdx]')
     df = df.Define('Z2_mass', 'ZZCand_Z2mass[bestCandIdx]')
 
-    df = df.Define('Jetclean_idx', 'idx_equal(Jet_ZZMask, 0)')
-    df = df.Define('Jetclean_pt', 'fill_with_indexes(Jet_pt, Jetclean_idx)')
-    df = df.Define('Jetpt50_idx', 'return idx_passingT<float>(Jetclean_pt, [](float f){ return f > 50.; })')
-    df = df.Define('nJetpt50'   , 'Jetpt50_idx.size()');
+    df = df.Define('JetClean_idx', 'idx_equal(Jet_ZZMask, 0)')
+    df = df.Define('nJetClean', 'JetClean_idx.size()')
     for var in ('pt', 'eta', 'phi', 'mass'):
-        df = df.Define('Jetpt50_%s'%(var), 'fill_with_indexes(Jet_%s, Jetpt50_idx)'%(var))
+        df = df.Define('JetClean_%s'%(var), 'fill_with_indexes(Jet_%s, JetClean_idx)'%(var))
+    df = df.Define('JetGood_idx' , 'jetPtCut(%d, JetClean_pt, JetClean_eta)'%(year_int)) # indexes into JetClean
+    df = df.Define('nJetGood'    , 'JetGood_idx.size()');
+    for var in ('pt', 'eta', 'phi', 'mass'):
+        df = df.Define('JetGood_%s'%(var), 'fill_with_indexes(JetClean_%s, JetGood_idx)'%(var))
         for i in (0,1):
-            df = df.Define('j%d_%s' %(i+1, var), 'Jetpt50_%s[%d]' %(var, i))
+            df = df.Define('j%d_%s' %(i+1, var), 'JetGood_%s[%d]' %(var, i))
 
     df = df.Define('absdetajj', 'fabs(j1_eta-j2_eta)')
 
@@ -226,7 +229,7 @@ def analyze(df, args):
     # futures.append(mkhist(df, 'incl_nJets', ';# jets', 10,-0.5,9.5, v='nCleanedJetsPt30'))
 
     ### Selection
-    df = df.Filter(*['nJetpt50 >= 2']*2)
+    df = df.Filter(*['nJetGood >= 2']*2)
     df = df.Filter(*['mj1j2 > 120']*2)
 
     ### Histograms
@@ -283,8 +286,8 @@ def define_histograms(df, prefix=''):
     futures.append(mkhist(df, prefix+'j2_pt'    , ';j2 p_{T} [GeV]'    ,60,  0, 600, v='j2_pt'    ))
     futures.append(mkhist(df, prefix+'FSLFO'    , ';Final state'       , 4,  0,   4, v='FSLFO'    ))
     futures.append(mkhist(df, prefix+'mj1j2'    , ';m_{j1 j2}'         ,60,  0,1200, v='mj1j2'    ))
-    futures.append(mkhist(df, prefix+'nJets'    , ';# jets'            ,10,-.5, 9.5, v='nCleanedJetsPt30'))
-    futures.append(mkhist(df, prefix+'nJetpt50',';# jets (p_{T}^{j} > 50)',10,-.5, 9.5, v='nJetpt50'))
+    futures.append(mkhist(df, prefix+'nJets'    , ';# jets (cleaned)'  ,10,-.5, 9.5, v='nCleanedJetsPt30'))
+    futures.append(mkhist(df, prefix+'nJetGood' ,';# jets (re-cleaned)',10,-.5, 9.5, v='nJetGood'))
     for prob in ('EWK', 'QCD'):
         futures.append(mkhist(df, prefix+'MELA_'+prob+'_log', ';log(P(%s))'%(prob), 50,-50, 0, v='P_%s_log'%(prob)))
     futures.append(mkhist (df, prefix+'ratio_EW_EWpQCD', ';P_{EW}/(P_{EW}+P_{QCD})', 50, 0, 1, v='ratio_EW_EWpQCD'))

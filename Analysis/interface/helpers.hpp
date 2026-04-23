@@ -30,6 +30,9 @@ idx_equal(const ROOT::RVecI& vec, int value);
 ROOT::RVecI
 idx_subvec_equal(const ROOT::RVecI& vec, const ROOT::RVecI& subidxs, int value);
 
+ROOT::RVecI
+jetPtCut(int year, const ROOT::RVecF &pts, const ROOT::RVecF &etas);
+
 template<class T>
 ROOT::VecOps::RVec<T>
 fill_with_indexes(const ROOT::VecOps::RVec<T> &src, const ROOT::RVecI &v_idx);
@@ -39,10 +42,10 @@ ROOT::VecOps::RVec<T>
 concat(const ROOT::VecOps::RVec<T>& lhs, const ROOT::VecOps::RVec<T>& rhs);
 
 int
-debug_print_vecF(const ROOT::RVecF &v, int);
+debug_print_vecF(const ROOT::RVecF &, const std::string&);
 int
-debug_print_vecI(const ROOT::RVecI &v, int);
+debug_print_vecI(const ROOT::RVecI &, const std::string&);
 
 int
-debug_print_F(float, int);
+debug_print_F(float, const std::string&);
 #endif
