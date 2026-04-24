@@ -63,7 +63,7 @@ def main(args):
 
     # Run the analysis
     t_start = time()
-    histograms = analyze(df, args)
+    histograms, counters = analyze(df, args)
     hmaps = []
     re_skip_syst = re.compile('Z[12]l[12]_')
     for hist in histograms:
@@ -75,6 +75,10 @@ def main(args):
         else:
             hmap = VariationsFor(hist)
         hmaps.append(hmap)
+
+    counters_read = {n: v.GetValue() for n,v in counters.items()}
+    for name, value in counters_read.items():
+        logging.info('cut %-30.30s: %.3g events' %(name, value))
 
     t_end = time()
     logging.info('Time elapsed: %.3g s', t_end-t_start)
@@ -135,9 +139,11 @@ def analyze(df, args):
         logging.info('Filtered entries: %d', max_entries)
 
     futures = [] # <ROOT.RDF.RResultPtr>
+    counters = {'all': df.Sum('weight')}
 
     ### Pre-selection for SR4P
     df = df.Filter(*['nZZCand > 0']*2)
+    counters['has ZZ'] = df.Sum('weight')
 
     ### Systematics, called before definitions ###
     if(args.is_MC):
@@ -230,19 +236,28 @@ def analyze(df, args):
 
     ### Selection
     df = df.Filter(*['nJetGood >= 2']*2)
+    counters['>= 2 good jets'] = df.Sum('weight')
     df = df.Filter(*['mj1j2 > 120']*2)
 
     ### Histograms
     futures.append(mkhist(df, 'weight', ';weight', 50,-5.,5.))
-
+    counters['[inclusive] mjj > 120 GeV'] = df.Sum('weight')
     futures.extend( define_histograms(df         , prefix='') )
+
     df_VBSincl  = df         .Filter(*['ZZ_mass > 180']*2)
+    counters['[VBSincl] ZZ_mass > 180 GeV'] = df.Sum('weight')
     futures.extend( define_histograms(df_VBSincl , prefix='VBSincl/') )
+
     df_mjj400   = df_VBSincl .Filter(*['mj1j2 > 400']*2)
-    futures.extend( define_histograms(df_mjj400  , prefix='mZZ180-mjj400/') )
+    counters['mjj > 400 GeV'] = df.Sum('weight')
+    # futures.extend( define_histograms(df_mjj400  , prefix='mZZ180-mjj400/') )
+
     df_VBSloose = df_mjj400  .Filter(*['absdetajj > 2.4']*2)
+    counters['[VBSloose] |deta_jj| > 2.4'] = df.Sum('weight')
     futures.extend( define_histograms(df_VBSloose, prefix='VBSloose/') )
+
     df_VBStight = df_VBSloose.Filter(*['mj1j2 > 1000']*2)
+    counters['[VBStight] mjj > 1000 GeV'] = df.Sum('weight')
     futures.extend( define_histograms(df_VBStight, prefix='VBStight/') )
 
     for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
@@ -272,7 +287,7 @@ def analyze(df, args):
     df.Report().GetValue().Print()
     logging.info('Events with MELA==0 / total: %d/%d', n_zeroMELA.GetValue(), n_total.GetValue())
 
-    return futures
+    return futures, counters
 
 
 def define_histograms(df, prefix=''):
