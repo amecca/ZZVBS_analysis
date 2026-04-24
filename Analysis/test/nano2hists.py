@@ -60,6 +60,7 @@ def main(args):
         df = df.Define('weight', '(double) overallEventWeight * ZZCand_dataMCWeight[bestCandIdx] * %f' %(lumi/genEventSumw))
     else:
         df = df.Define('weight', '(double)1.')
+    df = df.Define('weight2', 'weight*weight')
 
     # Run the analysis
     t_start = time()
@@ -76,15 +77,21 @@ def main(args):
             hmap = VariationsFor(hist)
         hmaps.append(hmap)
 
-    counters_read = {n: v.GetValue() for n,v in counters.items()}
-    for name, value in counters_read.items():
-        logging.info('cut %-30.30s: %.3g events' %(name, value))
+    # Read the manual cut reports (for weighted events) and fill an histogram
+    counters_read = {n: [v[0].GetValue(), math.sqrt(v[1].GetValue())] for n,v in counters.items()}
+    h_cuts = ROOT.TH1F('AAA_cutflow', 'cutflow;cut;Events', len(counters_read),0,1)
+    for i, (name, value) in enumerate(counters_read.items()):
+        logging.info('cut %-30.30s: %.3g +- %.3g events' %(name, *value))
+        h_cuts.GetXaxis().SetBinLabel(i+1, name)
+        h_cuts.SetBinContent(i+1, value[0])
+        h_cuts.SetBinError  (i+1, value[0])
 
     t_end = time()
     logging.info('Time elapsed: %.3g s', t_end-t_start)
 
     # Write histograms
     with TFileContext(args.fname_out, 'RECREATE') as tf_out:
+        h_cuts.Write()
         for hmap in hmaps:
             write_resultmap(hmap)
     logging.info('wrote %d histograms to "%s"', len(histograms), args.fname_out)
@@ -139,11 +146,11 @@ def analyze(df, args):
         logging.info('Filtered entries: %d', max_entries)
 
     futures = [] # <ROOT.RDF.RResultPtr>
-    counters = {'all': df.Sum('weight')}
+    counters = {'all': [df.Sum('weight'), df.Sum('weight2')]}
 
     ### Pre-selection for SR4P
     df = df.Filter(*['nZZCand > 0']*2)
-    counters['has ZZ'] = df.Sum('weight')
+    counters['has ZZ'] = [df.Sum('weight'), df.Sum('weight2')]
 
     ### Systematics, called before definitions ###
     if(args.is_MC):
@@ -236,28 +243,28 @@ def analyze(df, args):
 
     ### Selection
     df = df.Filter(*['nJetGood >= 2']*2)
-    counters['>= 2 good jets'] = df.Sum('weight')
+    counters['>= 2 good jets'] = [df.Sum('weight'), df.Sum('weight2')]
     df = df.Filter(*['mj1j2 > 120']*2)
 
     ### Histograms
     futures.append(mkhist(df, 'weight', ';weight', 50,-5.,5.))
-    counters['[inclusive] mjj > 120 GeV'] = df.Sum('weight')
+    counters['[inclusive] mjj > 120 GeV'] = [df.Sum('weight'), df.Sum('weight2')]
     futures.extend( define_histograms(df         , prefix='') )
 
     df_VBSincl  = df         .Filter(*['ZZ_mass > 180']*2)
-    counters['[VBSincl] ZZ_mass > 180 GeV'] = df.Sum('weight')
+    counters['[VBSincl] ZZ_mass > 180 GeV'] = [df.Sum('weight'), df.Sum('weight2')]
     futures.extend( define_histograms(df_VBSincl , prefix='VBSincl/') )
 
     df_mjj400   = df_VBSincl .Filter(*['mj1j2 > 400']*2)
-    counters['mjj > 400 GeV'] = df.Sum('weight')
+    counters['mjj > 400 GeV'] = [df.Sum('weight'), df.Sum('weight2')]
     # futures.extend( define_histograms(df_mjj400  , prefix='mZZ180-mjj400/') )
 
     df_VBSloose = df_mjj400  .Filter(*['absdetajj > 2.4']*2)
-    counters['[VBSloose] |deta_jj| > 2.4'] = df.Sum('weight')
+    counters['[VBSloose] |deta_jj| > 2.4'] = [df.Sum('weight'), df.Sum('weight2')]
     futures.extend( define_histograms(df_VBSloose, prefix='VBSloose/') )
 
     df_VBStight = df_VBSloose.Filter(*['mj1j2 > 1000']*2)
-    counters['[VBStight] mjj > 1000 GeV'] = df.Sum('weight')
+    counters['[VBStight] mjj > 1000 GeV'] = [df.Sum('weight'), df.Sum('weight2')]
     futures.extend( define_histograms(df_VBStight, prefix='VBStight/') )
 
     for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
