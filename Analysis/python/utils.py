@@ -24,12 +24,13 @@ class TFileContext(object):
 # https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun3
 lumi_dict = {
     # Errors expressed as lnN parameters: e.g. 1.6% -> 1.016
-    'Run2'    : {'value':137620  , 'error_uncorrelated': 1.016,'error_correlated': 0},
-    '2022pre'     : {'value':  8090},
-    '2022EE'      : {'value': 26680},
-    '2023preBPix' : {'value': 18600},
-    '2023postBPix': {'value':  9680},
-    '2024'        : {'value':109950},
+    'Run2'       : {'value':137620  },
+    '2022preEE'  : {'value':  7980.4},
+    '2022EE'     : {'value': 26671.7},
+    '2023preBPix': {'value': 18063  },
+    '2023BPix'   : {'value':  9693  },
+    '2024'       : {'value':109080  },
+    'Run3'       : {'value':171488  },
 }
 
 # The Run3 correlation scheme is a bit different
