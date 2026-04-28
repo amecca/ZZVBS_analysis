@@ -64,7 +64,7 @@ def main(args):
 
     if(args.do_plots):
         set_style()
-        os.makedirs('plot/systematics/%s/%s'%(args.region, args.year), exist_ok=True)
+        os.makedirs('plots/systematics/%s/%s'%(args.region, args.year), exist_ok=True)
 
     hists_folder = InputDir(basedir=args.inputdir, year=args.year) #, region=args.region
     hists_basep = hists_folder.path()
@@ -270,7 +270,7 @@ def plot_syst(hCe, hUp, hDn, yields, formatInfo, **kwargs):  # <TH1>, <TH1>, <TH
 
     for ext in ('png', 'pdf'):
         formatInfo['var'] = formatInfo['var'].replace('/','-')
-        c.SaveAs('plot/systematics/{region}/{year}/{sample}_{var}_{syst}.{ext}'.format(**formatInfo, ext=ext))
+        c.SaveAs('plots/systematics/{region}/{year}/{sample}_{var}_{syst}.{ext}'.format(**formatInfo, ext=ext))
     del c
 
 
