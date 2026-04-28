@@ -31,13 +31,17 @@ variable_dicts = [
     {'name': 'ratio_EW_EWpQCD', 'blind':True, 'logy': True, 'y_scale': 1e3},
     {'name':'absdetajj', 'xtitle':'|#Delta#eta(j1,j2)|', 'logy':True, 'rebin':4, 'y_scale': 1e7},
     {'name':'nJets', 'logy':True, 'y_scale': 1e6},
-    *[{'name': Zxlx+'_eta'    , 'y_scale': 3, 'rebin':5} for Zxlx in ('Z1l1','Z1l2','Z2l1','Z2l2')],
-    *[{'name': Zxlx+'_phinorm', 'y_scale': 3, 'rebin':5} for Zxlx in ('Z1l1','Z1l2','Z2l1','Z2l2')],
     # {'name': 'ZZ_mass', 'blind':True},
     {'name': 'ZZ_Muon_minmvaLowPt', 'logy':True, 'y_min': 1e-2},
     # {'name': 'ZZ_leadingMu_eta', 'rebin':1},
     # {'name': 'ZZ_subleadMu_eta', 'rebin':1},
     {'name':'FSLFO'}
+]
+
+# Plots that only exists in the top-level TDirectory
+variable_dicts_no_nest = [
+    *[{'name': Zxlx+'_eta'    , 'y_scale': 3, 'rebin':5} for Zxlx in ('Z1l1','Z1l2','Z2l1','Z2l2')],
+    *[{'name': Zxlx+'_phinorm', 'y_scale': 3, 'rebin':5} for Zxlx in ('Z1l1','Z1l2','Z2l1','Z2l2')],
 ]
 
 def main(args: Namespace):
@@ -52,9 +56,14 @@ def main(args: Namespace):
     variables = []
     for k in variable_dicts:
         tmp = dict(**k)
-        for prefix in ('', 'VBSincl-', 'mZZ180-mjj400-', 'VBSloose-', 'VBStight-'):
-            tmp['name'] = prefix+k['name']
+        for prefix in ('', 'VBSincl/', 'VBSloose/', 'VBStight/'):
+            tmp['name'] = prefix+k['name']+'-nominal'
             variables.append(VarInfo(**tmp))
+
+    for k in variable_dicts_no_nest:
+        tmp = dict(**k)
+        tmp['name'] = k['name']+'-nominal'
+        variables.append(VarInfo(**tmp))
 
     # Open the files that contain the histograms to be plotted
     info_data, infos_MCs = get_samples_info(region='4P')
@@ -71,7 +80,6 @@ def main(args: Namespace):
 
     # Defaults for non-customized vars:
     all_keys = {k.GetName() for k in samples_MC[0].get_keys()}
-    print('\t'+'\n\t'.join(sorted(all_keys)))
     all_keys = {k for k in all_keys if not k.endswith(('-Up', '-Dn'))}
     new_keys = all_keys - {v.name for v in variables}
     variables.extend([VarInfo(name=n, rebin=args.rebin) for n in new_keys])
@@ -100,7 +108,8 @@ def main(args: Namespace):
             var.extra['y_min'] = 1e-2
         if  (var.name.startswith('VBStight-ratio')):
             var.extra['y_min'] = 1e-3
-        plot_var(var, sample_data, samples_MC, args)
+        err = plot_var(var, sample_data, samples_MC, args)
+        if(err != 0): return 1
 
     return 0
 
@@ -249,15 +258,16 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
         text.SetTextSize(.12)
         text.Draw("same")
 
+    # Save the plots
     for ext in ['png', 'pdf']:
-        outfname = os.path.join(args.outdir, var.name+'.'+ext)
+        outfname = os.path.join(args.outdir, var.name.replace('/','-')+'.'+ext)
         canvas.SaveAs(outfname)
         # campaign = 'Test' # TODO: use the inputdir
         # cmd = ['exiftool', '-overwrite_original', '-Keywords=%s'%(campaign), outfname]
         # logging.debug('running: %s', ' '.join(cmd))
         # run(cmd) # subprocess; willingly ignore errors
 
-    return
+    return 0
 
 
 def parse_args():

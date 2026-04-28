@@ -21,7 +21,7 @@ DIRS ::= \
   hists_data $(patsubst %,hists_data/%,2022EE 2024) \
   hists_cut hists_cut/2024 compare_muID compare_muID/2024 \
   hists_pol hists_pol/2024 compare_pol compare_pol/2024 \
-  dataMC/2024 \
+  plots/dataMC/2024 \
 
 # all: ZZjj-EWK_hists.root ZZjj-QCD_hists.root
 all: $(HISTS_2024_gg2e2muPOWHEG) #$(HISTS_2024) # compareplots/2023postBPix/.timestamp #$(HISTS_2022EE)
@@ -111,7 +111,7 @@ compare_muID/2024/%_lower.png: compare_muID/2024/.timestamp
 compare_muID/2024/%_channels.png: compare_muID/2024/%_upper.png compare_muID/2024/%_lower.png
 	convert -append $^ +repage $@
 
-dataMC/2024/.timestamp: plot_dataMC.py $(HISTS_MC_2024) hists/2024/data.root | dataMC/2024
+plots/dataMC/2024/.timestamp: plot_dataMC.py $(HISTS_MC_2024) hists/2024/data.root | plots/dataMC/2024
 	./$< -o $(@D) -y 2024 --log $(LOGLEVEL) hists/2024
 	touch $@
 
