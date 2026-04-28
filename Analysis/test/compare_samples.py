@@ -31,15 +31,16 @@ def main(args: Namespace):
     lumi_decimals = (3 - ceil(log10(lumi_val))) # 3 significative digits
     cmsstyle.SetLumi(lumi_val, run=args.year, round_lumi=lumi_decimals)
 
-    sample1 = SampleHandle(name='sample1', title=args.title1, color=args.color1, fpaths=args.files1)
-    sample2 = SampleHandle(name='sample2', title=args.title2, color=args.color2, fpaths=args.files2)
+    sample1 = SampleHandle.from_abspath(name='sample1', title=args.title1, color=args.color1, fpaths=args.files1)
+    sample2 = SampleHandle.from_abspath(name='sample2', title=args.title2, color=args.color2, fpaths=args.files2)
 
     os.makedirs(args.outdir, exist_ok=True)
 
     # Fast algorithm: search keys only in the first file
     # keys = [k.GetName() for k in sample1.files[0].GetListOfKeys()]
     # Slow algorithm: search keys in all files
-    keys = {k.GetName() for f in sample1.files + sample2.files for k in f.GetListOfKeys()}
+    keys = {k.GetName() for k in sample1.get_keys()} & {k.GetName() for k in sample2.get_keys()}
+    logging.debug('n keys: %d', len(keys))
 
     for key in keys:
         plot_compare(key, sample1, sample2, **vars(args))

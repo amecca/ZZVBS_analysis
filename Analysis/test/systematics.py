@@ -66,8 +66,7 @@ def main(args):
         set_style()
         os.makedirs('plots/systematics/%s/%s'%(args.region, args.year), exist_ok=True)
 
-    hists_folder = InputDir(basedir=args.inputdir, year=args.year) #, region=args.region
-    hists_basep = hists_folder.path()
+    hists_basep = args.inputdir
     logging.debug('hists_basep: %s', hists_basep)
 
     systDBfname = os.path.join(args.output, '%s.json'%(args.year))

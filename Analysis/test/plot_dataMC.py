@@ -165,6 +165,8 @@ def plot_var(var: VarInfo, sample_data: SampleHandle, samples_MC: list[SampleHan
     logging.debug('data: %s', hdata)
     logging.debug('MC  : %s', last_stack)
     if(is_unblind):
+        if(hdata is None):
+            raise RuntimeError('No data histograms for %s'%(var.name))
         ratio.Divide(hdata, last_stack, 'pois')
 
     # Canvas creation

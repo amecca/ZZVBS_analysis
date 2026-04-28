@@ -45,11 +45,29 @@ class SampleHandle(SampleInfo):
     '''
     def __init__(self, *args, dirpath:str, **kwargs):
         super().__init__(*args, **kwargs)
-        self.dirpath = dirpath
 
-        self.files = []
+        self.dirpath = dirpath
+        self.fpaths = []
         for fname in self.fnames:
             fpath = os.path.join(self.dirpath, fname+'.root')
+            self.fpaths.append(fpath)
+
+        self.files = []
+        self.open_files()
+
+
+    @classmethod
+    def from_abspath(cls, fpaths:list[str], **kwargs):
+        out = cls(**kwargs, fnames=[], dirpath='')
+        out.fpaths = fpaths
+        out.fnames = [os.path.splitext(os.path.basename(p))[0] for p in self.fpaths]
+        out.open_files()
+
+        return out
+
+
+    def open_files(self):
+        for fpath in self.fpaths:
             try:
                 f = ROOT.TFile(fpath)
             except OSError as e:
@@ -57,6 +75,7 @@ class SampleHandle(SampleInfo):
             else:
                 logging.debug('sample: %s: opened %s', self.name, fpath)
                 self.files.append(f)
+
 
     @classmethod
     def from_info(cls, info: SampleInfo, dirpath: str):
