@@ -1,0 +1,38 @@
+{
+    "signals": ["signal", "qqZZ-EWK"],
+    "region": "",
+    "processes": {"ZZGTo4LG": -1}, "#":"total yield, written to the datacard; if unspecified, the hist yield is used",
+    "observable": {"name":"ratio_EW_EWpQCD", "observation":-1},
+
+    "#":"Data-driven backgrounds that may be used are to be treated specially",
+    "data-driven": ["fake_leptons", "fake_photons"],
+
+    "#":"General configuration",
+    "systematics":{
+        "shape": ["CMS_SMP24014_fake_g_shapeCR", "CMS_scale_j", "CMS_res_j"],
+
+	"#": "These change the full name of the hist in the output workspace and the syst in the datacard",
+        "correlated"  : ["CMS_l1_prefiring", "pdf", "QCDscale", "alphas", "CMS_eff_g", "CMS_eff_g_IDMVA", "CMS_scale_g", "CMS_res_g", "CMS_eff_m", "CMS_eff_e", "CMS_fake_g", "CMS_scale_e", "CMS_scale_m", "CMS_res_e", "CMS_res_m"],
+        "uncorrelated": ["CMS_electronVeto", "CMS_fake_m", "CMS_fake_e", "CMS_SMP24014_fake_leptons_norm", "CMS_SMP24014_fake_photons_norm", "CMS_SMP24014_fake_g_ARstat", "CMS_scale_j", "CMS_res_j"],
+        "correl_year" : ["CMS_pileup"], "#":"Systematics that are uncorrelated between years, but correlated between 2016/22/23 pre/post",
+	"split-by-sample-group": ["QCDscale", "pdf"],
+
+        "skip-if-signal": ["QCDscale", "alphas", "pdf"],
+
+	"norm_uncertainty": {"fake_leptons": {"up":0.40, "dn":-0.40}},
+	"set_manual": {
+	    "CMS_SMP24014_fake_g_shapeCR": {
+		"fake_photons": {"up": 0.5, "dn": -0.5}
+	    }
+	},
+
+	"groups": {
+            "theory": ["QCDscale", "alphas", "pdf"],
+            "datadr": ["CMS_fake_g", "CMS_SMP24014_fake_g_ARstat", "CMS_fake_m", "CMS_fake_e"],
+	    "lumi"  : ["lumi"]
+	},
+
+        "autoMCStats_threshold": 5,
+	"_end": []
+    }
+}
