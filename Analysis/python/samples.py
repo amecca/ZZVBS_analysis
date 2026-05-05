@@ -105,9 +105,10 @@ class SampleHandle(SampleInfo):
 
 class InputDir():
     'Standardize how to find histograms'
-    def __init__(self, basedir, year):
+    def __init__(self, basedir, year, **kwargs):
         self.basedir = basedir
         self.year = year
+        logging.warning('extra args passed to InputDir ctor: %s', kwargs)
 
     def path(self):
         return os.path.join(self.basedir, self.year)
