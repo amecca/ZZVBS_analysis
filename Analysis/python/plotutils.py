@@ -144,8 +144,40 @@ def TH1_integr_and_err(h, binx1=0, binx2=-1):
     return i, e.value
 
 
-def TH1_get_max_rigth(h):
+def TH1_get_max_right(h):
     '''Return the value of the highest bin after the middle (where the legend should be)'''
     n = h.GetNbinsX()
     return max(h.GetBinContent(i) for i in range(n//2, n+1))
+
+
+def retrieve_bin_edges(axis: ROOT.TAxis):
+    '''
+    Return an array.array of nbins+1 bin edges both in case of fixed and variable bins
+    '''
+    if( len(axis.GetXbins()) > 0 ):
+        # variable bin size
+        edges = array('d', axis.GetXbins())
+    else:
+        # fixed bin size
+        edges = array('d', np.linspace(axis.GetXmin(), axis.GetXmax(), axis.GetNbins()+1))
+    return edges
+
+
+def fix_low_bins(h, v=1e-7):
+    'Set bins <= 0 to some value'
+    if(h.GetDimension() > 1):
+        raise NotImplementedError('Cannot handle %s' %(type(h)))
+
+    fixed_bins = 0
+    for b in range(1, h.GetXaxis().GetNbins()+1):
+        c = h.GetBinContent(b)
+        if(c < v):
+            # logging.debug('%s bin %d (%.3g) set to %.3g', h.GetName(), b, c, v)
+            h.SetBinContent(b, v)
+            fixed_bins += 1
+    return fixed_bins
+
+
+def fix_neg_bins(h):
+    return fix_low_bins(h, 0, name)
 
