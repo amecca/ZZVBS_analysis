@@ -147,6 +147,9 @@ class TKeyDeep():
     def ReadObj(self):
         return self.tkey.ReadObj()
 
+    def __lt__(self, rhs):
+        return self.GetName() < rhs.GetName()
+
 
 def get_keys_deep(tf):
     'Recursively get all the keys in the TFile/TDirectory and it sub-directories'
@@ -158,7 +161,7 @@ def get_keys_deep(tf):
                 for k in get_keys_deep(key.ReadObj())
             ])
         else:
-            out.append(key)
+            out.append(TKeyDeep(key))
     return out
 
 
