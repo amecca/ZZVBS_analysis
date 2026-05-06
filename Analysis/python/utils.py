@@ -36,16 +36,16 @@ lumi_dict = {
 # The Run3 correlation scheme is a bit different
 lumi_unc_dict = {
     "2022&2023&2024": {
-        "lumi_1": {
+        "lumi_13p6TeV_1": {
             "2022": 1.0138,
             "2023": 1.0017,
             "2024": 1.0020
         },
-        "lumi_2": {
+        "lumi_13p6TeV_2": {
             "2023": 1.0127,
             "2024": 1.0068
         },
-        "lumi_3": {
+        "lumi_13p6TeV_3": {
             "2024": 1.0144
         }
     }
