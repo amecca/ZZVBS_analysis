@@ -1,3 +1,4 @@
+import pandas as pd
 import logging
 
 
@@ -122,3 +123,30 @@ class SystNameHelper:
         else: raise TypeError('Unknown correlation type "%s"' %(self.corrtype))
 
         return out
+
+
+class SystHelperCache(dict):
+    def __init__(self, config):
+        self.config = config
+
+    def get_or_make(self, syst):
+        if syst not in self.keys():
+            self[syst] = SystNameHelper(syst, self.config)
+        return self[syst]
+
+
+def formatUpDn(value, fmt='%+2.2f'):
+    if   all(abs(v) < 1e-4 for v in [value['up'], value['dn']]):
+        return '-'
+    else:
+        return (fmt+'/'+fmt) %(value['up']*100, value['dn']*100)  # For slides or AN
+
+
+def fillDataFrame(raw_data, formatter=formatUpDn, fmt='%+2.2f'):
+    # "Unpack" the inner dictionary {'up':x.xx, 'dn':x.xx} into a string
+    data = { sample:
+             { syst: formatter(value, fmt=fmt) for syst, value in d.items() }
+             for sample, d in raw_data.items() }
+
+    # Use pandas for pretty formatting
+    return pd.DataFrame.from_dict(data) #, orient='index')

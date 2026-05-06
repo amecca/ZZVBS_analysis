@@ -28,8 +28,7 @@
 
 	"groups": {
             "theory": ["QCDscale", "alphas", "pdf"],
-            "datadr": ["CMS_fake_g", "CMS_SMP24014_fake_g_ARstat", "CMS_fake_m", "CMS_fake_e"],
-	    "lumi"  : ["lumi"]
+            "datadr": ["CMS_fake_g", "CMS_SMP24014_fake_g_ARstat", "CMS_fake_m", "CMS_fake_e"]
 	},
 
         "autoMCStats_threshold": 5,
