@@ -60,7 +60,7 @@ class SampleHandle(SampleInfo):
     def from_abspath(cls, fpaths:list[str], **kwargs):
         out = cls(**kwargs, fnames=[], dirpath='')
         out.fpaths = fpaths
-        out.fnames = [os.path.splitext(os.path.basename(p))[0] for p in self.fpaths]
+        out.fnames = [os.path.splitext(os.path.basename(p))[0] for p in out.fpaths]
         out.open_files()
 
         return out
