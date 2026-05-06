@@ -102,18 +102,16 @@ def write_resultmap(hdict):
     hcentr = hdict['nominal']
     hname = hcentr.GetName()
     path_elems = hname.split('/')
-    basename = path_elems[-1]
+    basename = path_elems.pop()
     logging.debug('central name: %s -> %s', hname, path_elems)
 
     # Optional: create subdirectories in the tf
     path_elems.reverse()
     curdir = tf_out
-    while(len(path_elems) > 1):
+    while(len(path_elems) > 0):
         dirname = path_elems.pop()
-        if(curdir.cd(dirname)):
-            continue
-        logging.debug('    making dir "%s"', dirname)
-        curdir = curdir.mkdir(dirname)
+        newdir = curdir.Get(dirname)
+        curdir = newdir if newdir else curdir.mkdir(dirname)
         curdir.cd()
 
     # Write histograms
