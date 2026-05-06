@@ -35,6 +35,18 @@ class SystDB:
             .setdefault(sample, {})\
             [syst] = value
 
+    def get(self, region, var, sample, syst):
+        return self.db_\
+            .get(region, {})\
+            .get(var   , {})\
+            .get(sample, {})\
+            .get(syst  , None)
+
+    def get_samples_systs(self, region, var):
+        return self.db_\
+            .get(region, {})\
+            .get(var   , {})
+
     @staticmethod
     def deep_update_(orig, new):
         'Merge data from another dictionary'
@@ -56,7 +68,7 @@ class SystDB:
     def load(self, fname):
         with open(fname) as f:
             self.db_ = json.load(f)
-        logging.info('loaded previous dict from "%s"', fname)
+        logging.info('loaded systematics from "%s"', fname)
 
 
 def main(args):
