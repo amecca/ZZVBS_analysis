@@ -26,6 +26,18 @@ sum_E_mass(float pt1, float eta1, float phi1, float e1,
   return p4_sum.M();
 }
 
+PtEtaPhiMVector
+sum4_M(float pt1, float eta1, float phi1, float m1,
+       float pt2, float eta2, float phi2, float m2,
+       float pt3, float eta3, float phi3, float m3,
+       float pt4, float eta4, float phi4, float m4) {
+  PtEtaPhiMVector p4_1 {pt1, eta1, phi1, m1};
+  PtEtaPhiMVector p4_2 {pt2, eta2, phi2, m2};
+  PtEtaPhiMVector p4_3 {pt3, eta3, phi3, m3};
+  PtEtaPhiMVector p4_4 {pt4, eta4, phi4, m4};
+  auto p4_sum = p4_1 + p4_2 + p4_3 + p4_4;
+  return p4_sum;
+}
 
 /* Get the indexes of elements passing a cut */
 template<class T>
@@ -134,6 +146,7 @@ fill_with_indexes(const RVec<T> &src, const RVecI &v_idx) {
 
 template RVec<float> fill_with_indexes<float>(const RVec<float>&, const RVecI&);
 template RVec<int  > fill_with_indexes<int  >(const RVec<int  >&, const RVecI&);
+template RVec<PtEtaPhiMVector> fill_with_indexes<PtEtaPhiMVector>(const RVec<PtEtaPhiMVector>&, const RVecI&);
 
 
 /*

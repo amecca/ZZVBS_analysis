@@ -3,6 +3,8 @@
 
 #include <functional> /* std::function<> */
 #include "ROOT/RVec.hxx"
+#include <Math/Vector4D.h>
+
 
 float
 sum_M_mass(float, float, float, float,
@@ -11,6 +13,12 @@ sum_M_mass(float, float, float, float,
 float
 sum_E_mass(float, float, float, float,
 	   float, float, float, float);
+
+ROOT::Math::PtEtaPhiMVector
+sum4_M(float pt1, float eta1, float phi1, float m1,
+       float pt2, float eta2, float phi2, float m2,
+       float pt3, float eta3, float phi3, float m3,
+       float pt4, float eta4, float phi4, float m4);
 
 /* Get the indexes of elements passing a condition */
 template<class T>
