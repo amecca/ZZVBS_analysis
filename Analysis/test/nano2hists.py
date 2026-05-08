@@ -70,7 +70,7 @@ def main(args):
     for hist in histograms:
         hname = hist.GetName()
         # skip variations for some histograms
-        if(re_skip_syst.search(hname)):
+        if((not args.do_syst) or re_skip_syst.search(hname)):
             logging.debug('skipping systs for "%s"', hname)
             hmap = RResultMapEmulator(nominal=hist)
         else:
@@ -117,6 +117,7 @@ def parse_args():
     parser.add_argument('-n', '--max-entries', type=int, default=0, metavar='N', help='Process a maximum of N entries (disables multithreading)')
     # parser.add_argument(      '--mt'   , dest='multithread', action='store_true' , help='Enable ROOT implicit multithread (default)', default=True)
     parser.add_argument(      '--no-mt', dest='multithread', action='store_false', help='Disable ROOT implicit multithread (output entries will not be ordered)')
+    parser.add_argument(      '--no-syst', action='store_false', dest='do_syst', help='Skip the systematic variations')
 
     # Data/MC? -> 12. In the face of ambiguity, refuse the temptation to guess.
     pgisMC = parser.add_mutually_exclusive_group(required=True)
