@@ -163,7 +163,7 @@ def analyze(df, args):
 
         # Lepton pt scale and resolution
         for var in ('scaleDn_pt', 'scaleUp_pt', 'smearDn_pt', 'smearUp_pt'):
-            df = df.Define('Lepton_%s'%(var), 'concat(Electron_%s, Muon_%s)'%(var, var))
+            df = df.Define('Lepton_%s'%(var), 'ROOT::VecOps::Concatenate(Electron_%s, Muon_%s)'%(var, var))
 
         for flav in ('Electron', 'Muon', 'Lepton'):
             initial = flav.lower()[0]

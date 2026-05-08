@@ -33,13 +33,11 @@ idx_subvec_equal(const ROOT::RVecI& vec, const ROOT::RVecI& subidxs, int value);
 ROOT::RVecI
 jetPtCut(int year, const ROOT::RVecF &pts, const ROOT::RVecF &etas);
 
+/* Could be replace by ROOT::VecOps::Take(), except that this deals well
+   with indexes < 0, by invoking the default constructor */
 template<class T>
 ROOT::VecOps::RVec<T>
 fill_with_indexes(const ROOT::VecOps::RVec<T> &src, const ROOT::RVecI &v_idx);
-
-template<class T>
-ROOT::VecOps::RVec<T>
-concat(const ROOT::VecOps::RVec<T>& lhs, const ROOT::VecOps::RVec<T>& rhs);
 
 int
 debug_print_vecF(const ROOT::RVecF &, const std::string&);
