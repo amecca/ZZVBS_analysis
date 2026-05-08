@@ -3,6 +3,9 @@
 
 using ROOT::Math::PtEtaPhiMVector;
 using ROOT::Math::PtEtaPhiEVector;
+using ROOT::VecOps::RVec;
+using ROOT::RVecI;
+using ROOT::RVecF;
 
 
 float
@@ -26,9 +29,9 @@ sum_E_mass(float pt1, float eta1, float phi1, float e1,
 
 /* Get the indexes of elements passing a cut */
 template<class T>
-ROOT::RVecI
-idx_passingT(const ROOT::VecOps::RVec<T>& vec, std::function<bool(T)> f) {
-  ROOT::RVecI out;
+RVecI
+idx_passingT(const RVec<T>& vec, std::function<bool(T)> f) {
+  RVecI out;
   out.reserve(vec.size());
   for(int i = 0; i < (int)vec.size(); ++i) {
     if(f(vec[i]))
@@ -38,15 +41,15 @@ idx_passingT(const ROOT::VecOps::RVec<T>& vec, std::function<bool(T)> f) {
 }
 
 /* explicit template instantiation */
-template ROOT::RVecI idx_passingT<float>(const ROOT::VecOps::RVec<float>&, std::function<bool(float)>);
-template ROOT::RVecI idx_passingT<int  >(const ROOT::VecOps::RVec<int  >&, std::function<bool(int  )>);
+template RVecI idx_passingT<float>(const RVec<float>&, std::function<bool(float)>);
+template RVecI idx_passingT<int  >(const RVec<int  >&, std::function<bool(int  )>);
 
 
 /* Same as idx_passingT(), but only on the elements with index in subidxs */
 template<class T>
-ROOT::RVecI
-idx_passing_subvecT(const ROOT::VecOps::RVec<T>& vec, const ROOT::RVecI& subidxs, std::function<bool(T)> f) {
-  ROOT::RVecI out;
+RVecI
+idx_passing_subvecT(const RVec<T>& vec, const RVecI& subidxs, std::function<bool(T)> f) {
+  RVecI out;
   out.reserve(vec.size());
   for(int i : subidxs) {
     if(f(vec[i]))
@@ -55,14 +58,14 @@ idx_passing_subvecT(const ROOT::VecOps::RVec<T>& vec, const ROOT::RVecI& subidxs
   return out;
 }
 
-template ROOT::RVecI idx_passing_subvecT<float>(const ROOT::VecOps::RVec<float>&, const ROOT::RVecI&, std::function<bool(float)>);
-template ROOT::RVecI idx_passing_subvecT<int  >(const ROOT::VecOps::RVec<int  >&, const ROOT::RVecI&, std::function<bool(int  )>);
+template RVecI idx_passing_subvecT<float>(const RVec<float>&, const RVecI&, std::function<bool(float)>);
+template RVecI idx_passing_subvecT<int  >(const RVec<int  >&, const RVecI&, std::function<bool(int  )>);
 
 
 /* Special case in which f = [value](int e){ return e==value; } */
-ROOT::RVecI
-idx_equal(const ROOT::RVecI& vec, int value) {
-  ROOT::RVecI out;
+RVecI
+idx_equal(const RVecI& vec, int value) {
+  RVecI out;
   out.reserve(vec.size());
 
   for(int i = 0; i < (int)vec.size(); ++i) {
@@ -74,9 +77,9 @@ idx_equal(const ROOT::RVecI& vec, int value) {
 
 
 /* Same, but only consider elements in subidxs */
-ROOT::RVecI
-idx_subvec_equal(const ROOT::RVecI& vec, const ROOT::RVecI& subidxs, int value) {
-  ROOT::RVecI out;
+RVecI
+idx_subvec_equal(const RVecI& vec, const RVecI& subidxs, int value) {
+  RVecI out;
   out.reserve(vec.size());
 
   for(int i : subidxs) {
@@ -89,15 +92,15 @@ idx_subvec_equal(const ROOT::RVecI& vec, const ROOT::RVecI& subidxs, int value) 
 
 /* Reimplemetnation of the jet selection from JetMET, to propagate the JER/JES; see
 https://indico.cern.ch/event/1615783/contributions/6811120/attachments/3186812/5672346/20251204_JetMET_PerformanceRun3.pdf */
-ROOT::RVecI
-jetPtCut(int year, const ROOT::RVecF &pts, const ROOT::RVecF &etas) {
+RVecI
+jetPtCut(int year, const RVecF &pts, const RVecF &etas) {
   size_t size = pts.size();
   if(size != etas.size()){
     printf("ERROR:%s: vectors of uneven size: %ld %ld\n", __func__, size, etas.size());
     exit(2);
   }
 
-  ROOT::RVecI out;
+  RVecI out;
   out.reserve(size);
   for(int i = 0; i < (int)size; ++i){
     float pt   = pts[i];
@@ -116,9 +119,9 @@ jetPtCut(int year, const ROOT::RVecF &pts, const ROOT::RVecF &etas) {
 
 
 template<class T>
-ROOT::VecOps::RVec<T>
-fill_with_indexes(const ROOT::VecOps::RVec<T> &src, const ROOT::RVecI &v_idx) {
-  ROOT::VecOps::RVec<T> out;
+RVec<T>
+fill_with_indexes(const RVec<T> &src, const RVecI &v_idx) {
+  RVec<T> out;
 
   for(auto &idx : v_idx)
   {
@@ -128,8 +131,8 @@ fill_with_indexes(const ROOT::VecOps::RVec<T> &src, const ROOT::RVecI &v_idx) {
   return out;
 }
 
-template ROOT::VecOps::RVec<float> fill_with_indexes<float>(const ROOT::VecOps::RVec<float>&, const ROOT::RVecI&);
-template ROOT::VecOps::RVec<int  > fill_with_indexes<int  >(const ROOT::VecOps::RVec<int  >&, const ROOT::RVecI&);
+template RVec<float> fill_with_indexes<float>(const RVec<float>&, const RVecI&);
+template RVec<int  > fill_with_indexes<int  >(const RVec<int  >&, const RVecI&);
 
 
 /*
@@ -146,7 +149,7 @@ template ROOT::VecOps::RVec<int  > fill_with_indexes<int  >(const ROOT::VecOps::
       debug vector var0 (0x123456): 51., 42.,
 */
 int
-debug_print_vecF(const ROOT::RVecF &vec, const std::string &name) {
+debug_print_vecF(const RVecF &vec, const std::string &name) {
   printf("debug vector %s (%p):", name.c_str(), &vec);
   for(auto e : vec)
     printf(" %f,", e);
@@ -155,7 +158,7 @@ debug_print_vecF(const ROOT::RVecF &vec, const std::string &name) {
 }
 
 int
-debug_print_vecI(const ROOT::RVecI &vec, const std::string &name) {
+debug_print_vecI(const RVecI &vec, const std::string &name) {
   printf("debug vector %s (%p):", name.c_str(), &vec);
   for(auto e : vec)
     printf(" %d,", e);
