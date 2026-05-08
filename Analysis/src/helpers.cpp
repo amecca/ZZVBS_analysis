@@ -125,7 +125,8 @@ fill_with_indexes(const RVec<T> &src, const RVecI &v_idx) {
 
   for(auto &idx : v_idx)
   {
-    out.push_back(src[idx]);
+    /* if idx is -1, put an empty object */
+    out.push_back(idx >= 0 ? src[idx] : T{});
   }
 
   return out;
