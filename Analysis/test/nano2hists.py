@@ -75,16 +75,17 @@ def main(args):
         genEventSumw = df_runs.Sum('genEventSumw').GetValue()
         logging.info('genEventSumw: %g', genEventSumw)
         lumi = lumi_dict[args.year]['value']
-        df = df.Define('weight', '(double) overallEventWeight * ZZCand_dataMCWeight[bestCandIdx] * %f' %(lumi/genEventSumw))
+        # this is the weight without the lepton and jet efficiency Scale Factors;
+        # the full weight is computed in analyze(), with the respective systematic variations
+        df = df.Define('weight_base', '(double) overallEventWeight * %f' %(lumi/genEventSumw))
     else:
-        df = df.Define('weight', '(double)1.')
-    df = df.Define('weight2', 'weight*weight')
+        df = df.Define('weight_base', '1.')
 
     # Run the analysis
     t_start = time()
     histograms, counters = analyze(df, args)
     hmaps = []
-    re_skip_syst = re.compile('Z[12]l[12]_')
+    re_skip_syst = re.compile('(^ud_$|Z[12]l[12]_)')
     for hist in histograms:
         hname = hist.GetName()
         # skip variations for some histograms
@@ -166,11 +167,7 @@ def analyze(df, args):
         logging.info('Filtered entries: %d', max_entries)
 
     futures = [] # <ROOT.RDF.RResultPtr>
-    counters = {'all': [df.Sum('weight'), df.Sum('weight2')]}
-
-    ### Pre-selection for SR4P
-    df = df.Filter(*['nZZCand > 0']*2)
-    counters['has ZZ'] = [df.Sum('weight'), df.Sum('weight2')]
+    counters = {}
 
     ### Preliminary definitions needed also for the systematics
     for Zxlx in ZXLX_LIST:
@@ -182,8 +179,46 @@ def analyze(df, args):
 
     ### Systematics, called before definitions ###
     if(args.is_MC):
-        df = df.Vary('weight', 'ROOT::RVecD{weight*puWeightDn/puWeight, weight*puWeightUp/puWeight}', ['Dn', 'Up'], 'CMS_pileup')
+        ##### Systematics that affect the event weight
+        ### Pileup (total pp cross section)
+        df = df.Vary('weight_base', 'ROOT::RVecD{puWeightDn/puWeight, puWeightUp/puWeight} * weight_base', ['Dn', 'Up'], 'CMS_pileup')
 
+        ### QCD scale
+        # Take the min and max of the envelope, excluding (0.5, 2), (1, 1) and (2, 0.5)
+        df = df.Define('LHEScaleWeightFiltered', 'ROOT::VecOps::Drop(LHEScaleWeight, ROOT::RVecI{2, 4, 6})')
+        df = df.Define('QCDscaleDnUp', 'ROOT::RVecF{Min(LHEScaleWeightFiltered), Max(LHEScaleWeightFiltered)}')
+        df = df.Vary('weight_base', 'QCDscaleDnUp * weight_base', ['Dn', 'Up'], 'QCDscale')
+
+        ### PDF variations
+        # Take the min and max of the envelope
+        df = df.Define('LHEPdfDnUp', 'ROOT::RVecF{Min(LHEPdfWeight), Max(LHEPdfWeight)}')
+        df = df.Vary('weight_base', 'LHEPdfDnUp * weight_base', ['Dn', 'Up'], 'pdf')
+
+        ### Lepton efficiency
+        # Sometimes muons have efficiency SF = 1.0 +- 0.5
+        df = df.Define('Muon_dataMCUncFix'    , 'fix_SFuncert(Muon_dataMC, Muon_dataMCUnc)')
+        df = df.Alias ('Electron_dataMCUncFix', 'Electron_dataMCUnc')
+
+        for flavour in ('Electron', 'Muon'):
+            initial = flavour.lower()[0] if SYST_SPLIT_LEP_EFF else 'l'
+            # Define vectors with the efficiency SF of each lepton varied up/dn, then register this as a variation
+            df = df.Define(flavour+'_dataMCvaried_Up', '{flavour}_dataMC + {flavour}_dataMCUncFix'.format(flavour=flavour))
+            df = df.Define(flavour+'_dataMCvaried_Dn', '{flavour}_dataMC - {flavour}_dataMCUncFix'.format(flavour=flavour))
+            df = df.Vary(flavour+'_dataMC', 'RVec<RVecF>{{ {flavour}_dataMCvaried_Dn, {flavour}_dataMCvaried_Up }}'.format(flavour=flavour), ['Dn', 'Up'], 'CMS_eff_%s'%(initial))
+
+        # Define the vectors of efficiency SF for: all the leptons, those in the ZZ
+        df = df.Define('Lepton_dataMC', 'ROOT::VecOps::Concatenate(Electron_dataMC, Muon_dataMC)')
+        df = df.Define('ZZ_Lepton_dataMC', 'ROOT::VecOps::Take(Lepton_dataMC, ZZ_Lepton_idx)')
+        df = df.Define('ZZ_dataMC'      , 'ROOT::VecOps::Product(ZZ_Lepton_dataMC)') # recompute with systematics
+
+        # Check the ratio of the ZZ eff SF in the ntuples and the one recomputed just before
+        df = df.Define('ZZ_dataMC_fixed', 'ZZCand_dataMCWeight[bestCandIdx]') # value in the nutples
+        df = df.Define('ZZ_dataMC_ratio', 'ZZ_dataMC/ZZ_dataMC_fixed') # the ratio is 1 for nominal, != 1 for the CMS_eff_{e,m} variations
+
+        ### Compute the event weigth
+        df = df.Define('weight', 'weight_base * ZZ_dataMC')
+
+        ##### Systematics that do NOT affect the weight
         ### JES, JER
         for var in ('pt', 'mass'):
             df = df.Vary('Jet_%s'%(var), 'ROOT::VecOps::RVec<ROOT::RVecF>{Jet_scaleDn_%s, Jet_scaleUp_%s}'%(var,var), ['Dn', 'Up'], 'CMS_scale_j')
@@ -192,30 +227,20 @@ def analyze(df, args):
         ### Lepton pt scale and resolution
         # Define separate uncertainties for Electrons and Muons
         for flav in ('Electron', 'Muon'):
-            initial = flav.lower()[0]
+            initial = flav.lower()[0] if SYST_SPLIT_LEP_SCALE else 'l'
             df = df.Vary('%s_pt'%(flav), 'ROOT::VecOps::RVec<ROOT::RVecF>{%s_scaleDn_pt, %s_scaleUp_pt}'%(flav,flav), ['Dn', 'Up'], 'CMS_scale_%s'%(initial))
             df = df.Vary('%s_pt'%(flav), 'ROOT::VecOps::RVec<ROOT::RVecF>{%s_smearDn_pt, %s_smearUp_pt}'%(flav,flav), ['Dn', 'Up'], 'CMS_res_%s'  %(initial))
+    else:
+        df = df.Alias('weight', 'weight_base')
 
-        ### Lepton efficiency
-        if(args.split_lep_eff_unc):
-            # Create two vectors with the electron and muon data/MC uncertainties respectively;
-            # the entries for the other flavour are set to 0, so that they don't contribute to the sum
-            df = df.Define('Lepton_dataMCUnc_e', 'ROOT::VecOps::Concatenate(Electron_dataMCUnc, RVecF(nMuon, 0.f))'.format(var=var))
-            df = df.Define('Lepton_dataMCUnc_m', 'ROOT::VecOps::Concatenate(RVecF(nElectron, 0.f), Muon_dataMCUnc)'.format(var=var))
+    # square of the event weight, used for the error in counters -> sum(w) +- sqrt(sum(w^2))
+    df = df.Define('weight2', 'weight*weight')
 
-            # Define the efficiency uncertainty (data/MC) from Electrons and Muons on ZZ
-            for flav in ('e', 'm'):
-                vec = 'ZZ_Lepton_dataMCUnc_'+flav
-                df = df.Define(vec, 'ROOT::VecOps::Take(Lepton_dataMCUnc_{flav}, ZZ_Lepton_idx)'.format(flav=flav))
-                unc = 'ZZ_dataMCUnc_'+flav
-                # The total uncertainty for the ZZ is the sum of that of each lepton
-                df = df.Define(unc, 'ROOT::VecOps::Sum(%s)'%(vec))
-                df = df.Vary('weight', 'ROOT::RVecD{{ weight*(1-{unc}), weight*(1+{unc}) }}'.format(unc=unc), ['Dn', 'Up'], 'CMS_eff_'+flav)
-        else:
-            unc = 'ZZ_dataMCUnc'
-            df = define(unc, 'ZZCand_dataMCUnc[bestCandIdx]')
-            df = df.Vary('weight', 'ROOT::RVecD{{ weight*(1-{unc}), weight*(1+{unc}) }}'.format(unc=unc), ['Dn', 'Up'], 'CMS_eff_l')
     counters['all'] = YieldCheckpoint(df)
+
+    ### Pre-selection for SR4P
+    df = df.Filter(*['nZZCand > 0']*2)
+    counters['has ZZ'] = YieldCheckpoint(df)
 
     ### Aliases and definitions
     df = df.Define('ZZ_mass', 'ZZCand_mass[bestCandIdx]')
@@ -311,6 +336,62 @@ def analyze(df, args):
         df = df.Define('P_EWK', '0').Define('P_QCD', '0')
 
     ### Inclusive histograms
+    # DEBUG
+    df = df.Define('ZZ_Lepton_eta', 'ROOT::VecOps::Take(Lepton_eta, ZZ_Lepton_idx)')
+    df = df.Define('ZZ_Lepton_phi', 'ROOT::VecOps::Take(Lepton_phi, ZZ_Lepton_idx)')
+    for obj in ('ZZ', 'Z1', 'Z2'):
+        df = df.Define(obj+'_mass_diff', '{obj}_mass_new - {obj}_mass'.format(obj=obj))
+
+    df = df.Define('MuonBroken_idx',
+                   'return idx_passingT<float>(Muon_dataMCUnc, [](float unc){ return unc > 0.499; })')
+    df = df.Define('MuonBroken_pt', 'Take(Muon_pt, MuonBroken_idx)')
+    df = df.Define('MuonBrokenLowPt_idx',
+                   'return idx_passingT<float>(MuonBroken_pt, [](float pt){ return pt < 120; })')
+    df = df.Define('ZZ_Muon_dataMCUnc', 'Take(Muon_dataMCUnc, ZZ_Muon_idx)')
+    df = df.Define('ZZ_MuonBroken_idx',
+                   'return idx_passingT<float>(ZZ_Muon_dataMCUnc, [](float unc){ return unc > 0.499; })')
+
+    df_debug = df.Filter('MuonBrokenLowPt_idx.size() > 0')#'ZZ_MuonBroken_idx.size() > 0')
+    for obj in ('ZZ_MuonBroken', 'MuonBroken', 'MuonBrokenLowPt'):
+        for var in list(PT_ETA_PHI_MASS) + ['dataMC', 'dataMCUnc']:
+            df_debug = df_debug.Define(obj+'Lead_'+var, 'Muon_{var}[{obj}_idx[0]]'.format(obj=obj, var=var))
+        df_debug = df_debug.Define(obj+'Lead_phinorm', obj+'Lead_phi/%f' %(math.pi))
+
+        futures.append(mkhist(df_debug, obj+'Lead_pt'       , ';p_{T} [GeV]', 60, 0.,300.))
+        futures.append(mkhist(df_debug, obj+'Lead_eta'      , ';#eta'       , 60,-3.,  3.))
+        futures.append(mkhist(df_debug, obj+'Lead_phinorm'  , ';#phi/#pi'   , 50,-1.,  1.))
+        futures.append(mkhist(df_debug, obj+'Lead_dataMC'   , ';eff SF'     , 51, 0.,1.02))
+        futures.append(mkhist(df_debug, obj+'Lead_dataMCUnc', ';eff SF unc' , 50, 0.,  1.))
+
+    for var in ('dataMCUnc', 'dataMCUncFix'):
+        df_debug = df_debug.Define('Lepton_'+var   , 'Concatenate(Electron_{var}, Muon_{var})'.format(var=var))
+        df_debug = df_debug.Define('ZZ_Lepton_'+var, 'Take(Lepton_{var}, ZZ_Lepton_idx)'.format(var=var))
+
+    df_debug = df_debug.Define('ud0' , 'debug_print_header(event)')
+    last_label = 'ud0'
+
+    for vec in ('ZZ_Lepton_idx', 'Lepton_pdgId'):
+        new_label = 'ud_'+vec
+        df_debug = df_debug.Define(new_label, f'debug_print_vecI({vec}, "_{vec:20s}")+{last_label}')
+        last_label = new_label
+
+    for fl in ('ZZ_dataMC', 'ZZ_dataMC_fixed'):
+    #(obj+'_'+var for obj in ('Z1', 'Z2', 'ZZ') for var in ('mass', 'mass_new')):
+        new_label = 'ud_'+fl
+        df_debug = df_debug.Define(new_label, f'debug_print_F({fl}, "_{fl:20s}")+{last_label}')
+        last_label = new_label
+
+    for vec in ['Muon_pt', 'Muon_eta'] + \
+        [flav+'_'+var for flav in ('Electron', 'Muon', 'Lepton', 'ZZ_Lepton') for var in ('dataMC', 'dataMCUnc', 'dataMCUncFix')]\
+         :
+        vec_var = vec
+        new_label = 'ud_'+vec_var
+        df_debug = df_debug.Define(new_label, f'debug_print_vecF({vec_var}, "_{vec_var:20s}")+{last_label}')
+        last_label = new_label
+
+    df_debug = df_debug.Define('ud' , last_label)
+    # futures.append(mkhist(df_debug, 'ud','',1,0,1))
+
     # futures.append(mkhist(df, 'incl_nJets', ';# jets', 10,-0.5,9.5, v='nCleanedJetsPt30'))
 
     ### Selection
