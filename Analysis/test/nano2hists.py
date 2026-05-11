@@ -173,12 +173,10 @@ def analyze(df, args):
             df = df.Vary('Jet_%s'%(var), 'ROOT::VecOps::RVec<ROOT::RVecF>{Jet_scaleDn_%s, Jet_scaleUp_%s}'%(var,var), ['Dn', 'Up'], 'CMS_scale_j')
             df = df.Vary('Jet_%s'%(var), 'ROOT::VecOps::RVec<ROOT::RVecF>{Jet_smearDn_%s, Jet_smearUp_%s}'%(var,var), ['Dn', 'Up'], 'CMS_res_j')
 
-        # Lepton pt scale and resolution
-        for var in ('scaleDn_pt', 'scaleUp_pt', 'smearDn_pt', 'smearUp_pt'):
-            df = df.Define('Lepton_%s'%(var), 'ROOT::VecOps::Concatenate(Electron_%s, Muon_%s)'%(var, var))
-
-        for flav in ('Electron', 'Muon', 'Lepton'):
-            initial = flav.lower()[0]
+        ### Lepton pt scale and resolution
+        # Define separate uncertainties for Electrons and Muons
+        for flav in ('Electron', 'Muon'):
+            initial = 'l' # flav.lower()[0]
             df = df.Vary('%s_pt'%(flav), 'ROOT::VecOps::RVec<ROOT::RVecF>{%s_scaleDn_pt, %s_scaleUp_pt}'%(flav,flav), ['Dn', 'Up'], 'CMS_scale_%s'%(initial))
             df = df.Vary('%s_pt'%(flav), 'ROOT::VecOps::RVec<ROOT::RVecF>{%s_smearDn_pt, %s_smearUp_pt}'%(flav,flav), ['Dn', 'Up'], 'CMS_res_%s'  %(initial))
 
@@ -187,6 +185,11 @@ def analyze(df, args):
     df = df.Define('ZZ_KD'  , 'ZZCand_KD[bestCandIdx]')
     df = df.Define('Z1_mass', 'ZZCand_Z1mass[bestCandIdx]')
     df = df.Define('Z2_mass', 'ZZCand_Z2mass[bestCandIdx]')
+
+    # Redefine the Leptons momenta
+    # This is needed to re-compute ZZ_mass including the lepton scale/smear uncertainties
+    for var in PT_ETA_PHI_MASS:
+        df = df.Redefine('Lepton_'+var, 'ROOT::VecOps::Concatenate(Electron_{var}, Muon_{var})'.format(var=var))
 
     df = df.Define('JetClean_idx', 'idx_equal(Jet_ZZMask, 0)')
     df = df.Define('nJetClean', 'JetClean_idx.size()')
