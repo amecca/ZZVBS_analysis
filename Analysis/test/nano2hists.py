@@ -14,6 +14,7 @@ import logging
 from time import time
 import math
 import re
+import itertools
 
 import ROOT
 
@@ -267,6 +268,15 @@ def analyze(df, args):
     df = df.Define('Z2_Lepton_idx', 'ROOT::RVecI {Z2l1_idx, Z2l2_idx}')
     df = df.Define('ZZ_Lepton_pt', 'fill_with_indexes(Lepton_pt, ZZ_Lepton_idx)')
 
+    # The nominal value of ZZ_mass is in ZZCand_mass[bestCandIdx].
+    # If we want to propagate the systematics on the leptons' momenta with Vary(),
+    # we have to recompute it from scratch
+    input_ZZ_mass = [Zxlx+'_'+var for Zxlx, var in itertools.product(ZXLX_LIST, PT_ETA_PHI_MASS)]
+    df = df.Define('ZZ_mass_new', 'sum4_M(%s).M()'%(','.join(input_ZZ_mass)))
+    df = df.Define('Z1_mass_new', 'sum_M_mass(Z1l1_pt, Z1l1_eta, Z1l1_phi, Z1l1_mass, Z1l2_pt, Z1l2_eta, Z1l2_phi, Z1l2_mass)')
+    df = df.Define('Z2_mass_new', 'sum_M_mass(Z2l1_pt, Z2l1_eta, Z2l1_phi, Z2l1_mass, Z2l2_pt, Z2l2_eta, Z2l2_phi, Z2l2_mass)')
+
+    # Create a collection of muons used for the ZZ candidate, to compute e.g. the lowest MVA value
     df = df.Define('Lepton_absPdgId', 'return Map(Lepton_pdgId, [](int id){ return abs(id); })')
     df = df.Define('ZZ_Muon_idx', 'idx_subvec_equal(Lepton_absPdgId, ZZ_Lepton_idx, 13)')
     df = df.Define('ZZ_Muon_pt', 'fill_with_indexes(Lepton_pt, ZZ_Muon_idx)')
