@@ -156,6 +156,14 @@ def analyze(df, args):
     df = df.Filter(*['nZZCand > 0']*2)
     counters['has ZZ'] = [df.Sum('weight'), df.Sum('weight2')]
 
+    ### Preliminary definitions needed also for the systematics
+    for Zxlx in ZXLX_LIST:
+        df = df.Define(Zxlx+'_idx' , 'ZZCand_%sIdx[bestCandIdx]' %(Zxlx))
+
+    df = df.Define('ZZ_Lepton_idx', 'ROOT::RVecI {'+
+                   ','.join([ '%s_idx' %(Zxlx) for Zxlx in ZXLX_LIST])
+                   +'}')
+
     ### Systematics, called before definitions ###
     if(args.is_MC):
         df = df.Vary('weight', 'ROOT::RVecD{weight*puWeightDn/puWeight, weight*puWeightUp/puWeight}', ['Dn', 'Up'], 'CMS_pileup')
@@ -198,15 +206,12 @@ def analyze(df, args):
     df = df.Define('Z2flav', 'ZZCand_Z2flav[bestCandIdx]')
     df = df.Define('FSLFO', 'get_FSLFO(Z1flav, Z2flav)')
     for Zxlx in ZXLX_LIST:
-        df = df.Define(Zxlx+'_idx', 'ZZCand_%sIdx[bestCandIdx]' %(Zxlx))
-        df = df.Define(Zxlx+'_pt' , 'Lepton_pt[%s_idx]'  %(Zxlx))
-        df = df.Define(Zxlx+'_eta', 'Lepton_eta[%s_idx]' %(Zxlx))
-        df = df.Define(Zxlx+'_phi', 'Lepton_phi[%s_idx]' %(Zxlx))
+        df = df.Define(Zxlx+'_pt'  , 'Lepton_pt[%s_idx]'  %(Zxlx))
+        df = df.Define(Zxlx+'_eta' , 'Lepton_eta[%s_idx]' %(Zxlx))
+        df = df.Define(Zxlx+'_phi' , 'Lepton_phi[%s_idx]' %(Zxlx))
+        df = df.Define(Zxlx+'_mass', 'Lepton_mass[%s_idx]' %(Zxlx))
         df = df.Define(Zxlx+'_phinorm', Zxlx+'_phi/%f' %(math.pi))
 
-    df = df.Define('ZZ_Lepton_idx', 'ROOT::RVecI {'+
-                   ','.join([ '%s_idx' %(Zxlx) for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2')])
-                   +'}')
     df = df.Define('ZZ_Lepton_pt', 'fill_with_indexes(Lepton_pt, ZZ_Lepton_idx)')
 
     df = df.Define('Lepton_absPdgId', 'return Map(Lepton_pdgId, [](int id){ return abs(id); })')
