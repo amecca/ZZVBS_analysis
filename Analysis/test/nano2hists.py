@@ -180,6 +180,21 @@ def analyze(df, args):
             df = df.Vary('%s_pt'%(flav), 'ROOT::VecOps::RVec<ROOT::RVecF>{%s_scaleDn_pt, %s_scaleUp_pt}'%(flav,flav), ['Dn', 'Up'], 'CMS_scale_%s'%(initial))
             df = df.Vary('%s_pt'%(flav), 'ROOT::VecOps::RVec<ROOT::RVecF>{%s_smearDn_pt, %s_smearUp_pt}'%(flav,flav), ['Dn', 'Up'], 'CMS_res_%s'  %(initial))
 
+        ### Lepton efficiency
+        # Create two vectors with the electron and muon data/MC uncertainties respectively;
+        # the entries for the other flavour are set to 0, so that they don't contribute to the sum
+        df = df.Define('Lepton_dataMCUnc_e', 'ROOT::VecOps::Concatenate(Electron_dataMCUnc, RVecF(nMuon, 0.f))'.format(var=var))
+        df = df.Define('Lepton_dataMCUnc_m', 'ROOT::VecOps::Concatenate(RVecF(nElectron, 0.f), Muon_dataMCUnc)'.format(var=var))
+
+        # Define the efficiency uncertainty (data/MC) from Electrons and Muons on ZZ
+        for flav in ('e', 'm'):
+            vec = 'ZZ_Lepton_dataMCUnc_'+flav
+            df = df.Define(vec, 'ROOT::VecOps::Take(Lepton_dataMCUnc_{flav}, ZZ_Lepton_idx)'.format(flav=flav))
+            unc = 'ZZ_dataMCUnc_'+flav
+            # The total uncertainty for the ZZ is the sum of that of each lepton
+            df = df.Define(unc, 'ROOT::VecOps::Sum(%s)'%(vec))
+            df = df.Vary('weight', 'ROOT::RVecD{{ weight*(1-{unc}), weight*(1+{unc}) }}'.format(unc=unc), ['Dn', 'Up'], 'CMS_eff_'+flav)
+
     ### Aliases and definitions
     df = df.Define('ZZ_mass', 'ZZCand_mass[bestCandIdx]')
     df = df.Define('ZZ_KD'  , 'ZZCand_KD[bestCandIdx]')
