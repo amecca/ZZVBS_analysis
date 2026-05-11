@@ -197,11 +197,12 @@ def analyze(df, args):
             coldef = 'return ROOT::VecOps::Map({flav}Dressed_p4, [](const PtEtaPhiMVector& p4){{ return p4.{var}(); }})'.format(flav=flav, var=var)
             df = df.Define(colnam, coldef)
 
-    # Redefine the Leptons momenta
+    # Redefine the Leptons momenta to include FSR photons
     # This is needed to re-compute ZZ_mass including the lepton scale/smear uncertainties
     for var in PT_ETA_PHI_MASS:
-        df = df.Redefine('Lepton_'+var, 'ROOT::VecOps::Concatenate(Electron_{var}, Muon_{var})'.format(var=var))
+        df = df.Redefine('Lepton_'+var, 'ROOT::VecOps::Concatenate(ElectronDressed_{var}, MuonDressed_{var})'.format(var=var))
 
+    # Jets: repeat cleaning and eta-dependent pt cut, to propagate the scale/smear uncertainties
     df = df.Define('JetClean_idx', 'idx_equal(Jet_ZZMask, 0)')
     df = df.Define('nJetClean', 'JetClean_idx.size()')
     for var in PT_ETA_PHI_MASS:
