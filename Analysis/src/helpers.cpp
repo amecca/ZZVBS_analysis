@@ -164,31 +164,31 @@ template RVec<PtEtaPhiMVector> fill_with_indexes<PtEtaPhiMVector>(const RVec<PtE
 */
 int
 debug_print_vecF(const RVecF &vec, const std::string &name) {
-  printf("debug vector %s (%p):", name.c_str(), &vec);
+  printf("debug RVecF %s = {", name.c_str());
   for(auto e : vec)
     printf(" %f,", e);
-  printf("\n");
+  printf("};\n");
   return 0;
 }
 
 int
 debug_print_vecI(const RVecI &vec, const std::string &name) {
-  printf("debug vector %s (%p):", name.c_str(), &vec);
+  printf("debug RVecI %s = {", name.c_str());
   for(auto e : vec)
     printf(" %d,", e);
-  printf("\n");
+  printf("};\n");
   return 0;
 }
 
 int
 debug_print_F(float v, const std::string &name) {
-  printf("debug scalar %s: %f\n", name.c_str(), v);
+  printf("debug float %s = %f;\n", name.c_str(), v);
   return 0;
 }
 
 int
 debug_print_I(int i, const std::string &name) {
-  printf("debug scalar %s: %d\n", name.c_str(), i);
+  printf("debug int   %s = %d;\n", name.c_str(), i);
   return 0;
 }
 
