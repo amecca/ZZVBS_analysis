@@ -29,6 +29,9 @@ VariationsFor = ROOT.RDF.Experimental.VariationsFor
 class RResultMapEmulator(dict):
     def GetKeys(self): return self.keys()
 
+PT_ETA_PHI_MASS = ('pt', 'eta', 'phi', 'mass')
+ZXLX_LIST = ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2')
+
 
 def main(args):
     logging.debug('args: %s', args)
@@ -157,7 +160,7 @@ def analyze(df, args):
     if(args.is_MC):
         df = df.Vary('weight', 'ROOT::RVecD{weight*puWeightDn/puWeight, weight*puWeightUp/puWeight}', ['Dn', 'Up'], 'CMS_pileup')
 
-        # # JES, JER
+        ### JES, JER
         for var in ('pt', 'mass'):
             df = df.Vary('Jet_%s'%(var), 'ROOT::VecOps::RVec<ROOT::RVecF>{Jet_scaleDn_%s, Jet_scaleUp_%s}'%(var,var), ['Dn', 'Up'], 'CMS_scale_j')
             df = df.Vary('Jet_%s'%(var), 'ROOT::VecOps::RVec<ROOT::RVecF>{Jet_smearDn_%s, Jet_smearUp_%s}'%(var,var), ['Dn', 'Up'], 'CMS_res_j')
@@ -179,11 +182,11 @@ def analyze(df, args):
 
     df = df.Define('JetClean_idx', 'idx_equal(Jet_ZZMask, 0)')
     df = df.Define('nJetClean', 'JetClean_idx.size()')
-    for var in ('pt', 'eta', 'phi', 'mass'):
+    for var in PT_ETA_PHI_MASS:
         df = df.Define('JetClean_%s'%(var), 'fill_with_indexes(Jet_%s, JetClean_idx)'%(var))
     df = df.Define('JetGood_idx' , 'jetPtCut(%d, JetClean_pt, JetClean_eta)'%(year_int)) # indexes into JetClean
     df = df.Define('nJetGood'    , 'JetGood_idx.size()');
-    for var in ('pt', 'eta', 'phi', 'mass'):
+    for var in PT_ETA_PHI_MASS:
         df = df.Define('JetGood_%s'%(var), 'fill_with_indexes(JetClean_%s, JetGood_idx)'%(var))
         for i in (0,1):
             df = df.Define('j%d_%s' %(i+1, var), 'JetGood_%s[%d]' %(var, i))
@@ -194,7 +197,7 @@ def analyze(df, args):
     df = df.Define('Z1flav', 'ZZCand_Z1flav[bestCandIdx]')
     df = df.Define('Z2flav', 'ZZCand_Z2flav[bestCandIdx]')
     df = df.Define('FSLFO', 'get_FSLFO(Z1flav, Z2flav)')
-    for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
+    for Zxlx in ZXLX_LIST:
         df = df.Define(Zxlx+'_idx', 'ZZCand_%sIdx[bestCandIdx]' %(Zxlx))
         df = df.Define(Zxlx+'_pt' , 'Lepton_pt[%s_idx]'  %(Zxlx))
         df = df.Define(Zxlx+'_eta', 'Lepton_eta[%s_idx]' %(Zxlx))
@@ -219,8 +222,8 @@ def analyze(df, args):
     df = df.Define('ZZ_Muon_minmvaLowPt', 'ZZ_Muon_mvaLowPt.size() > 0? *std::min_element(ZZ_Muon_mvaLowPt.begin(), ZZ_Muon_mvaLowPt.end()) : 1.')
 
     # mjj
-    kinj1 = ['j1_%s' %(var) for var in ('pt', 'eta', 'phi', 'mass')]
-    kinj2 = ['j2_%s' %(var) for var in ('pt', 'eta', 'phi', 'mass')]
+    kinj1 = ['j1_%s' %(var) for var in PT_ETA_PHI_MASS]
+    kinj2 = ['j2_%s' %(var) for var in PT_ETA_PHI_MASS]
     df = df.Define('mj1j2' , 'sum_M_mass(' + ', '.join(kinj1 + kinj2) + ')')
 
     # MELA probabilities (automatic from the branch names)
@@ -268,7 +271,7 @@ def analyze(df, args):
     counters['[VBStight] mjj > 1000 GeV'] = [df.Sum('weight'), df.Sum('weight2')]
     futures.extend( define_histograms(df_VBStight, prefix='VBStight/') )
 
-    for Zxlx in ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2'):
+    for Zxlx in ZXLX_LIST:
         futures.append(mkhist(df, '%s_pt' %(Zxlx),    ';%s p_{T} [GeV]'%(Zxlx), 60,0.,600., v='%s_pt'     %(Zxlx)))
         futures.append(mkhist(df, '%s_eta'%(Zxlx),    ';%s #eta'       %(Zxlx), 50,-2.5,2.5,v='%s_eta'    %(Zxlx)))
         futures.append(mkhist(df, '%s_phinorm'%(Zxlx),';%s #phi/#pi'   %(Zxlx), 50,-1.,1. , v='%s_phinorm'%(Zxlx)))
