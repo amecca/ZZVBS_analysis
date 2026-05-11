@@ -186,6 +186,17 @@ def analyze(df, args):
     df = df.Define('Z1_mass', 'ZZCand_Z1mass[bestCandIdx]')
     df = df.Define('Z2_mass', 'ZZCand_Z2mass[bestCandIdx]')
 
+    # Dress Electrons and Muons using FsrPhotons
+    df = df.Define('FsrPhoton_p4', 'ROOT::VecOps::Construct<PtEtaPhiMVector>(FsrPhoton_pt, FsrPhoton_eta, FsrPhoton_phi, FsrPhoton_mass)')
+    for flav in ('Electron', 'Muon'):
+        df = df.Define(flav+'_p4', 'ROOT::VecOps::Construct<PtEtaPhiMVector>({flav}_pt, {flav}_eta, {flav}_phi, {flav}_mass)'.format(flav=flav))
+        df = df.Define(flav+'_FSRp4', 'fill_with_indexes(FsrPhoton_p4, {flav}_fsrPhotonIdx)'.format(flav=flav))
+        df = df.Define(flav+'Dressed_p4'  , '{flav}_p4 + {flav}_FSRp4'.format(flav=flav))
+        for var in PT_ETA_PHI_MASS:
+            colnam = flav+'Dressed_'+var
+            coldef = 'return ROOT::VecOps::Map({flav}Dressed_p4, [](const PtEtaPhiMVector& p4){{ return p4.{var}(); }})'.format(flav=flav, var=var)
+            df = df.Define(colnam, coldef)
+
     # Redefine the Leptons momenta
     # This is needed to re-compute ZZ_mass including the lepton scale/smear uncertainties
     for var in PT_ETA_PHI_MASS:
