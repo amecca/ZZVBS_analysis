@@ -227,6 +227,8 @@ def analyze(df, args):
         df = df.Define(Zxlx+'_mass', 'Lepton_mass[%s_idx]' %(Zxlx))
         df = df.Define(Zxlx+'_phinorm', Zxlx+'_phi/%f' %(math.pi))
 
+    df = df.Define('Z1_Lepton_idx', 'ROOT::RVecI {Z1l1_idx, Z1l2_idx}')
+    df = df.Define('Z2_Lepton_idx', 'ROOT::RVecI {Z2l1_idx, Z2l2_idx}')
     df = df.Define('ZZ_Lepton_pt', 'fill_with_indexes(Lepton_pt, ZZ_Lepton_idx)')
 
     df = df.Define('Lepton_absPdgId', 'return Map(Lepton_pdgId, [](int id){ return abs(id); })')
