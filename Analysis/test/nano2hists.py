@@ -176,7 +176,7 @@ def analyze(df, args):
         ### Lepton pt scale and resolution
         # Define separate uncertainties for Electrons and Muons
         for flav in ('Electron', 'Muon'):
-            initial = 'l' # flav.lower()[0]
+            initial = flav.lower()[0]
             df = df.Vary('%s_pt'%(flav), 'ROOT::VecOps::RVec<ROOT::RVecF>{%s_scaleDn_pt, %s_scaleUp_pt}'%(flav,flav), ['Dn', 'Up'], 'CMS_scale_%s'%(initial))
             df = df.Vary('%s_pt'%(flav), 'ROOT::VecOps::RVec<ROOT::RVecF>{%s_smearDn_pt, %s_smearUp_pt}'%(flav,flav), ['Dn', 'Up'], 'CMS_res_%s'  %(initial))
 
