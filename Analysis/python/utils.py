@@ -94,11 +94,12 @@ def write_resultmap(hdict):
     Write every histogram in the RResultMap passed as argument to the currently
     opened TFile (assuming that cd() has already been called)
     '''
+    n_written = 0
     tf_out = ROOT.TFile.CurrentFile()
     if(not tf_out):
         raise RuntimeError('No TFile is currently open')
 
-    logging.debug('keys: %s', hdict.GetKeys())
+    # logging.debug('keys: %s', hdict.GetKeys())
     hcentr = hdict['nominal']
     hname = hcentr.GetName()
     path_elems = hname.split('/')
@@ -116,6 +117,7 @@ def write_resultmap(hdict):
 
     # Write histograms
     hcentr.Write('%s-nominal'%(basename))
+    n_written += 1
 
     for k in hdict.GetKeys():
         if(k == "nominal"):
@@ -124,9 +126,12 @@ def write_resultmap(hdict):
         outn = '{basename}-{syst}-{updn}'.format(basename=basename, syst=syst, updn=updn)
         logging.debug('    %s -> (%s, %s) -> %s', k, syst, updn, outn)
         hdict[k].Write(outn)
+        n_written += 1
 
     # Reset the current directory
     tf_out.cd()
+
+    return n_written
 
 
 class TKeyDeep():

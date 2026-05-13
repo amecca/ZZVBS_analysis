@@ -95,11 +95,12 @@ def main(args):
     logging.info('Time elapsed: %.3g s', t_end-t_start)
 
     # Write histograms
+    n_written = 0
     with TFileContext(args.fname_out, 'RECREATE') as tf_out:
         h_cuts.Write()
         for hmap in hmaps:
-            write_resultmap(hmap)
-    logging.info('wrote %d histograms to "%s"', len(histograms), args.fname_out)
+            n_written += write_resultmap(hmap)
+    logging.info('wrote %d histograms (%d nominal) to "%s"', n_written, len(histograms), args.fname_out)
 
     ROOT.RDF.SaveGraph(df, './nano2hists.dot')
 
