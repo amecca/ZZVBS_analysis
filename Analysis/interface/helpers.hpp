@@ -47,6 +47,9 @@ template<class T>
 ROOT::VecOps::RVec<T>
 fill_with_indexes(const ROOT::VecOps::RVec<T> &src, const ROOT::RVecI &v_idx);
 
+ROOT::RVecF
+fix_SFuncert(const ROOT::RVecF &eff, const ROOT::RVecF &unc);
+
 int
 debug_print_vecF(const ROOT::RVecF &, const std::string&);
 int

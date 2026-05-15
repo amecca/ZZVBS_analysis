@@ -149,6 +149,22 @@ template RVec<int  > fill_with_indexes<int  >(const RVec<int  >&, const RVecI&);
 template RVec<PtEtaPhiMVector> fill_with_indexes<PtEtaPhiMVector>(const RVec<PtEtaPhiMVector>&, const RVecI&);
 
 
+RVecF
+fix_SFuncert(const RVecF &eff, const RVecF &unc) {
+  size_t size = eff.size();
+  if(size != unc.size()) {
+    printf("ERROR:%s: vectors of uneven size: %ld %ld\n", __func__, size, unc.size());
+    exit(2);
+  }
+
+  RVecF out(size);
+  for(size_t i = 0; i < size; ++i) {
+    out[i] = std::min(unc[i], 1.f - eff[i]);
+  }
+  return out;
+}
+
+
 /*
    Debug functions that print to stdout the contents of variables.
    To use them, the result value must be used to compute something, e.g. and
