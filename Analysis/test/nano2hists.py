@@ -29,6 +29,18 @@ VariationsFor = ROOT.RDF.Experimental.VariationsFor
 class RResultMapEmulator(dict):
     def GetKeys(self): return self.keys()
 
+class YieldCheckpoint():
+    def __init__(self, df):
+        self.w  = df.Sum('weight' )
+        self.w2 = df.Sum('weight2')
+
+    def err(self):
+        return math.sqrt(self.w2.GetValue())
+
+    def val(self):
+        return self.w.GetValue()
+
+
 PT_ETA_PHI_MASS = ('pt', 'eta', 'phi', 'mass')
 ZXLX_LIST = ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2')
 SYST_SPLIT_LEP_EFF = True
@@ -83,7 +95,7 @@ def main(args):
         hmaps.append(hmap)
 
     # Read the manual cut reports (for weighted events) and fill an histogram
-    counters_read = {n: [v[0].GetValue(), math.sqrt(v[1].GetValue())] for n,v in counters.items()}
+    counters_read = {n: [v.val(), v.err()] for n,v in counters.items()}
     h_cuts = ROOT.TH1F('AAA_cutflow', 'cutflow;cut;Events', len(counters_read),0,1)
     for i, (name, value) in enumerate(counters_read.items()):
         logging.info('cut %-30.30s: %.3g +- %.3g events' %(name, *value))
@@ -202,6 +214,7 @@ def analyze(df, args):
             unc = 'ZZ_dataMCUnc'
             df = define(unc, 'ZZCand_dataMCUnc[bestCandIdx]')
             df = df.Vary('weight', 'ROOT::RVecD{{ weight*(1-{unc}), weight*(1+{unc}) }}'.format(unc=unc), ['Dn', 'Up'], 'CMS_eff_l')
+    counters['all'] = YieldCheckpoint(df)
 
     ### Aliases and definitions
     df = df.Define('ZZ_mass', 'ZZCand_mass[bestCandIdx]')
@@ -292,28 +305,28 @@ def analyze(df, args):
 
     ### Selection
     df = df.Filter(*['nJetGood >= 2']*2)
-    counters['>= 2 good jets'] = [df.Sum('weight'), df.Sum('weight2')]
+    counters['>= 2 good jets'] = YieldCheckpoint(df)
     df = df.Filter(*['mj1j2 > 120']*2)
 
     ### Histograms
     futures.append(mkhist(df, 'weight', ';weight', 50,-5.,5.))
-    counters['[inclusive] mjj > 120 GeV'] = [df.Sum('weight'), df.Sum('weight2')]
+    counters['[inclusive] mjj > 120 GeV'] = YieldCheckpoint(df)
     futures.extend( define_histograms(df         , prefix='') )
 
     df_VBSincl  = df         .Filter(*['ZZ_mass > 180']*2)
-    counters['[VBSincl] ZZ_mass > 180 GeV'] = [df.Sum('weight'), df.Sum('weight2')]
+    counters['[VBSincl] ZZ_mass > 180 GeV'] = YieldCheckpoint(df)
     futures.extend( define_histograms(df_VBSincl , prefix='VBSincl/') )
 
     df_mjj400   = df_VBSincl .Filter(*['mj1j2 > 400']*2)
-    counters['mjj > 400 GeV'] = [df.Sum('weight'), df.Sum('weight2')]
+    counters['mjj > 400 GeV'] = YieldCheckpoint(df)
     # futures.extend( define_histograms(df_mjj400  , prefix='mZZ180-mjj400/') )
 
     df_VBSloose = df_mjj400  .Filter(*['absdetajj > 2.4']*2)
-    counters['[VBSloose] |deta_jj| > 2.4'] = [df.Sum('weight'), df.Sum('weight2')]
+    counters['[VBSloose] |deta_jj| > 2.4'] = YieldCheckpoint(df)
     futures.extend( define_histograms(df_VBSloose, prefix='VBSloose/') )
 
     df_VBStight = df_VBSloose.Filter(*['mj1j2 > 1000']*2)
-    counters['[VBStight] mjj > 1000 GeV'] = [df.Sum('weight'), df.Sum('weight2')]
+    counters['[VBStight] mjj > 1000 GeV'] = YieldCheckpoint(df)
     futures.extend( define_histograms(df_VBStight, prefix='VBStight/') )
 
     for Zxlx in ZXLX_LIST:
