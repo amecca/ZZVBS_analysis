@@ -290,9 +290,11 @@ def doSystematics(handle, var, syst, **kwargs):  # <TFile>, <str>, <str>, <dict>
     hCe = handle.get_hist('{var}-nominal'  .format(**formatInfo))
     hUp = handle.get_hist('{var}-{syst}-Up'.format(**formatInfo))
     hDn = handle.get_hist('{var}-{syst}-Dn'.format(**formatInfo))
-    if((not hUp) or (not hDn)):
+    if((not hUp) or (not hDn) or (not hCe)):
         logging.warning('var={var}, syst={syst} not found in sample={sample}'.format(**formatInfo))
         return SystDB()
+    else:
+        logging.debug('var={var}, syst={syst} found in sample={sample}'.format(**formatInfo))
 
     new_syst = analyze_syst(hCe, hUp, hDn, var=var, syst=syst, sample=handle.name, **kwargs)
     return new_syst
@@ -304,8 +306,7 @@ def doSystOnSample(handle, syst_regex=None, var_regex=None, **kwargs):  # <str>,
     logging.debug('sample = %s', handle.name)
 
     names = set()
-    for key in handle.GetListOfKeys():
-        name = key.GetName()
+    for name in handle.get_keys_names():
         if(name.count('-') >= 2):
             names.add(name)
 

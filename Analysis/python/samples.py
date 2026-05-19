@@ -87,20 +87,18 @@ class SampleHandle(SampleInfo):
         for f in self.files:
             h = f.Get(hname)
             integr, error = TH1_integr_and_err(h)
-            logging.debug('%-20.20s: %+.3g += %.3g',
+            logging.debug('%-10.10s:%-32.32s: %+.3g += %.3g',
                           os.path.basename(f.GetName()).replace('.root',''),
+                          hname,
                           integr, error)
             hlist.append(h)
 
         res = add_list_TObj(*hlist)
         return res
 
-    def get_keys(self):
-        return set.union(*[{k for k in get_keys_deep(f)} for f in self.files]
+    def get_keys_names(self):
+        return set.union(*[{k.GetName() for k in get_keys_deep(f)} for f in self.files]
                          , set()) # this last argument avoids crashing when no key can be retrieved
-
-    def GetListOfKeys(self):
-        return self.get_keys()
 
 
 class InputDir():
