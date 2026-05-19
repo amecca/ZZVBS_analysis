@@ -138,6 +138,7 @@ def parse_args():
     # parser.add_argument(      '--mt'   , dest='multithread', action='store_true' , help='Enable ROOT implicit multithread (default)', default=True)
     parser.add_argument(      '--no-mt', dest='multithread', action='store_false', help='Disable ROOT implicit multithread (output entries will not be ordered)')
     parser.add_argument(      '--no-syst', action='store_false', dest='do_syst', help='Skip the systematic variations')
+    parser.add_argument(      '--debug'  , action='store_true' , help='Call debug_print* functions (output to stdout)')
 
     # Data/MC? -> 12. In the face of ambiguity, refuse the temptation to guess.
     pgisMC = parser.add_mutually_exclusive_group(required=True)
@@ -389,8 +390,9 @@ def analyze(df, args):
         df_debug = df_debug.Define(new_label, f'debug_print_vecF({vec_var}, "_{vec_var:20s}")+{last_label}')
         last_label = new_label
 
-    df_debug = df_debug.Define('ud' , last_label)
-    # futures.append(mkhist(df_debug, 'ud','',1,0,1))
+    df_debug = df_debug.Define('ud_hist' , last_label)
+    if(args.debug):
+        futures.append(mkhist(df_debug, 'ud_hist','',1,0,1))
 
     # futures.append(mkhist(df, 'incl_nJets', ';# jets', 10,-0.5,9.5, v='nCleanedJetsPt30'))
 
