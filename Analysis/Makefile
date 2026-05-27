@@ -1,7 +1,7 @@
-CFLAGS   = -Iinterface -Wall -Werror -g -O1 -fno-omit-frame-pointer -lmath -fpic
-CXXFLAGS = $(CFLAGS) $(shell root-config --cflags) -I$(shell root-config --incdir)
-LDFLAGS  = -g -I. -Iinterface $(shell root-config --cflags)
-CLINGFLAGS= -f -Iinterface -I$(shell root-config --incdir) -rml --failOnWarnings -D__ACLIC__
+CFLAGS     ?= -Iinterface -Wall -Werror -O3 -lmath -fpic #-g -fno-omit-frame-pointer
+CXXFLAGS   ?= $(CFLAGS) $(shell root-config --cflags) -I$(shell root-config --incdir) -I$(CMSSW_BASE)/src/JHUGenMELA/MELA/interface
+LDFLAGS    ?= $(shell root-config --ldflags) -L$(CMSSW_BASE)/lib/$(SCRAM_ARCH) -lJHUGenMELAMELA
+CLINGFLAGS ?= -f -Iinterface -I$(shell root-config --incdir) -I$(CMSSW_BASE)/src/JHUGenMELA/MELA/interface -rml --failOnWarnings -D__ACLIC__
 VPATH ::= ./src ./interface
 LIBS ::= cConstants_cpp.so FakeRates_cpp.so helpers_cpp.so
 LIBPATHS ::= $(patsubst %,lib/%,$(LIBS))
