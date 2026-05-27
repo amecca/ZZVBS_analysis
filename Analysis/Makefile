@@ -3,7 +3,7 @@ CXXFLAGS   ?= $(CFLAGS) $(shell root-config --cflags) -I$(shell root-config --in
 LDFLAGS    ?= $(shell root-config --ldflags) -L$(CMSSW_BASE)/lib/$(SCRAM_ARCH) -lJHUGenMELAMELA
 CLINGFLAGS ?= -f -Iinterface -I$(shell root-config --incdir) -I$(CMSSW_BASE)/src/JHUGenMELA/MELA/interface -rml --failOnWarnings -D__ACLIC__
 VPATH ::= ./src ./interface
-LIBS ::= cConstants_cpp.so FakeRates_cpp.so helpers_cpp.so
+LIBS ::= cConstants_cpp.so FakeRates_cpp.so helpers_cpp.so MELAhelper_cpp.so
 LIBPATHS ::= $(patsubst %,lib/%,$(LIBS))
 DICT_SRCS ::= $(patsubst, %_cpp.so,%_cpp_ACLiC_dict.cxx,$(LIBPATHS))
 DICT_OBJS ::= $(patsubst, %.cxx,%,$(DICT_SRCS))
@@ -42,7 +42,7 @@ lib/%_cpp_ACLiC_dict: lib/%_cpp_ACLiC_dict.cxx
 	$(CXX) -I. $(CXXFLAGS) -c $< -o $@
 
 lib/%_cpp.so: lib/%_cpp_ACLiC_dict | lib
-	$(CXX) -rdynamic -shared $< -o $@
+	$(CXX) -rdynamic -shared $(LDFLAGS) $< -o $@
 
 # C++ libraries are compiled with root from the source
 # lib/%_cpp.so: src/%.cpp interface/%.hpp | lib

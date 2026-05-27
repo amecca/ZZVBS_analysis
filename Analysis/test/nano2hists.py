@@ -69,6 +69,11 @@ def main(args):
     ROOT.gInterpreter.AddIncludePath('../interface')
     find_load_lib('cConstants')
     find_load_lib('helpers')
+    find_load_lib('MELAhelper')
+
+    # Instantiate C++ objects
+    ROOT.gInterpreter.Declare('MELAhelper mela(max(1u, ROOT::GetThreadPoolSize()));') # GetThreadPoolSize() unhelpfully returns 0 in single-threaded mode...
+    ROOT.gInterpreter.Declare(r'int _=printf("DEBUG: Mela init status: %i\n", mela.init_status());')
 
     # Are we running on MC or data? Compute the weights
     if(args.is_MC):
@@ -279,6 +284,8 @@ def analyze(df, args):
         df = df.Define('JetGood_%s'%(var), 'fill_with_indexes(JetClean_%s, JetGood_idx)'%(var))
         for i in (0,1):
             df = df.Define('j%d_%s' %(i+1, var), 'JetGood_%s[%d]' %(var, i))
+    df = df.Define('JetGood_pdgId', 'ROOT::RVecI(JetGood_idx.size(), 0)') # Jets do not have a PDG ID assigned right now, and maybe ever
+    df = df.Define('JetGood_p4'   , 'ROOT::VecOps::Construct<PtEtaPhiMVector>(JetGood_pt, JetGood_eta, JetGood_phi, JetGood_mass)')
 
     df = df.Define('absdetajj', 'fabs(j1_eta-j2_eta)')
 
@@ -341,6 +348,12 @@ def analyze(df, args):
             df = df.Define('ratio_EW_EWpQCD'+cs, 'P_EWK/(P_EWK+%f*P_QCD)'%(c))
     else:
         df = df.Define('P_EWK', '0').Define('P_QCD', '0')
+
+    # MELA probabilities recomputed from available info
+    df = df.Define('_MELAsetup', 'mela.set_input_event(rdfslot_, ZZ_Lepton_p4, ZZ_Lepton_pdgId, JetGood_p4, JetGood_pdgId)')
+    # MELAsetup is 0, this is needed just so that RDF does not skip or reorder the definition in the line above
+    df = df.Define('P_EWK_new', 'mela.prob_EWK(rdfslot_) + _MELAsetup')
+    df = df.Define('P_EWK_new', 'mela.prob_QCD(rdfslot_) + _MELAsetup')
 
     ### Inclusive histograms
     # DEBUG
