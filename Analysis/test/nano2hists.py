@@ -46,6 +46,7 @@ PT_ETA_PHI_MASS = ('pt', 'eta', 'phi', 'mass')
 ZXLX_LIST = ('Z1l1', 'Z1l2', 'Z2l1', 'Z2l2')
 SYST_SPLIT_LEP_EFF = True
 SYST_SPLIT_LEP_SCALE = True
+MELA_CONSTANTS = (0.1,0.2,0.3,0.5)
 
 
 def main(args):
@@ -335,6 +336,9 @@ def analyze(df, args):
         for prob in ('P_EWK', 'P_QCD'):
             df = df.Define(prob+'_log', 'log(%s)'%(prob))
         df = df.Define('ratio_EW_EWpQCD', 'P_EWK/(P_EWK+P_QCD)')
+        for c in MELA_CONSTANTS:
+            cs = ('%.1f'%(c)).replace('.','p')
+            df = df.Define('ratio_EW_EWpQCD'+cs, 'P_EWK/(P_EWK+%f*P_QCD)'%(c))
     else:
         df = df.Define('P_EWK', '0').Define('P_QCD', '0')
 
@@ -470,6 +474,13 @@ def define_histograms(df, prefix=''):
     for prob in ('EWK', 'QCD'):
         futures.append(mkhist(df, prefix+'MELA_'+prob+'_log', ';log(P(%s))'%(prob), 50,-50, 0, v='P_%s_log'%(prob)))
     futures.append(mkhist (df, prefix+'ratio_EW_EWpQCD', ';P_{EW}/(P_{EW}+P_{QCD})', 50, 0, 1, v='ratio_EW_EWpQCD'))
+    for c in MELA_CONSTANTS:
+        cs = ('%.1f'%(c)).replace('.','p')
+        var = 'ratio_EW_EWpQCD'+cs
+        name = prefix+var
+        title = ';P_{EW}/(P_{EW}+%.1f P_{QCD})'%(c)
+        # logging.debug('mkhist %s -> %s', name, title)
+        futures.append(mkhist (df, name, title, 50, 0, 1, v=var))
 
     futures.append(mkhist(df, prefix+'ZZ_leadingMu_pt'    , ';leading #mu p_{T} [GeV]', 60, 0. ,300., v='ZZ_leadingMu_pt'    ))
     futures.append(mkhist(df, prefix+'ZZ_subleadMu_pt'    , ';sublead #mu p_{T} [GeV]', 60, 0. ,300., v='ZZ_subleadMu_pt'    ))
