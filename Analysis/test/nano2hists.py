@@ -244,17 +244,18 @@ def analyze(df, args):
     counters['has ZZ'] = YieldCheckpoint(df)
 
     ### Aliases and definitions
-    df = df.Define('ZZ_mass', 'ZZCand_mass[bestCandIdx]')
     df = df.Define('ZZ_KD'  , 'ZZCand_KD[bestCandIdx]')
-    df = df.Define('Z1_mass', 'ZZCand_Z1mass[bestCandIdx]')
-    df = df.Define('Z2_mass', 'ZZCand_Z2mass[bestCandIdx]')
 
     # Dress Electrons and Muons using FsrPhotons
     df = df.Define('FsrPhoton_p4', 'ROOT::VecOps::Construct<PtEtaPhiMVector>(FsrPhoton_pt, FsrPhoton_eta, FsrPhoton_phi, FsrPhoton_mass)')
     for flav in ('Electron', 'Muon'):
+        # construct a vector with the p4 of the leptons with this flavour
         df = df.Define(flav+'_p4', 'ROOT::VecOps::Construct<PtEtaPhiMVector>({flav}_pt, {flav}_eta, {flav}_phi, {flav}_mass)'.format(flav=flav))
+        # create a vector with the p4 of the FSR associated to each lepton; it there is none, use (0,0,0,0)
         df = df.Define(flav+'_FSRp4', 'fill_with_indexes(FsrPhoton_p4, {flav}_fsrPhotonIdx)'.format(flav=flav))
+        # create a vector with the sum of the two
         df = df.Define(flav+'Dressed_p4'  , '{flav}_p4 + {flav}_FSRp4'.format(flav=flav))
+        # flatten: create a vector for each component of the p4 for the dressed leptons of the current flavour
         for var in PT_ETA_PHI_MASS:
             colnam = flav+'Dressed_'+var
             coldef = 'return ROOT::VecOps::Map({flav}Dressed_p4, [](const PtEtaPhiMVector& p4){{ return p4.{var}(); }})'.format(flav=flav, var=var)
@@ -264,6 +265,7 @@ def analyze(df, args):
     # This is needed to re-compute ZZ_mass including the lepton scale/smear uncertainties
     for var in PT_ETA_PHI_MASS:
         df = df.Redefine('Lepton_'+var, 'ROOT::VecOps::Concatenate(ElectronDressed_{var}, MuonDressed_{var})'.format(var=var))
+    df = df.Define('Lepton_p4', 'ROOT::VecOps::Concatenate(ElectronDressed_p4, MuonDressed_p4)')
 
     # Jets: repeat cleaning and eta-dependent pt cut, to propagate the scale/smear uncertainties
     df = df.Define('JetClean_idx', 'idx_equal(Jet_ZZMask, 0)')
@@ -292,15 +294,15 @@ def analyze(df, args):
 
     df = df.Define('Z1_Lepton_idx', 'ROOT::RVecI {Z1l1_idx, Z1l2_idx}')
     df = df.Define('Z2_Lepton_idx', 'ROOT::RVecI {Z2l1_idx, Z2l2_idx}')
-    df = df.Define('ZZ_Lepton_pt', 'fill_with_indexes(Lepton_pt, ZZ_Lepton_idx)')
 
     # The nominal value of ZZ_mass is in ZZCand_mass[bestCandIdx].
     # If we want to propagate the systematics on the leptons' momenta with Vary(),
     # we have to recompute it from scratch
-    input_ZZ_mass = [Zxlx+'_'+var for Zxlx, var in itertools.product(ZXLX_LIST, PT_ETA_PHI_MASS)]
-    df = df.Define('ZZ_mass_new', 'sum4_M(%s).M()'%(','.join(input_ZZ_mass)))
-    df = df.Define('Z1_mass_new', 'sum_M_mass(Z1l1_pt, Z1l1_eta, Z1l1_phi, Z1l1_mass, Z1l2_pt, Z1l2_eta, Z1l2_phi, Z1l2_mass)')
-    df = df.Define('Z2_mass_new', 'sum_M_mass(Z2l1_pt, Z2l1_eta, Z2l1_phi, Z2l1_mass, Z2l2_pt, Z2l2_eta, Z2l2_phi, Z2l2_mass)')
+    df = df.Define('ZZ_Lepton_p4', 'Take(Lepton_p4, ZZ_Lepton_idx)')
+    df = df.Define('ZZ_Lepton_pdgId', 'Take(Lepton_pdgId, ZZ_Lepton_idx)')
+    df = df.Define('ZZ_mass', 'Sum(ZZ_Lepton_p4, PtEtaPhiMVector()).mass()')
+    df = df.Define('Z1_mass', 'sum_M_mass(Z1l1_pt, Z1l1_eta, Z1l1_phi, Z1l1_mass, Z1l2_pt, Z1l2_eta, Z1l2_phi, Z1l2_mass)')
+    df = df.Define('Z2_mass', 'sum_M_mass(Z2l1_pt, Z2l1_eta, Z2l1_phi, Z2l1_mass, Z2l2_pt, Z2l2_eta, Z2l2_phi, Z2l2_mass)')
 
     # Create a collection of muons used for the ZZ candidate, to compute e.g. the lowest MVA value
     df = df.Define('Lepton_absPdgId', 'return Map(Lepton_pdgId, [](int id){ return abs(id); })')
