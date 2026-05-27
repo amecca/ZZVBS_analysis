@@ -76,12 +76,15 @@ def main(args):
     # Sometimes the yield in data.root may be 0. In this case we must insert an empty histogram with the appropriate xaxis
     xbins_dict = dict()
 
+    necessary_keys_names = set(k for handle in handles for k in handle.get_keys_names() if k.endswith('-nominal'))
+
     # Write to output
     with TFileContext(os.path.join(path_out, args.year+'.root'), "RECREATE") as fout:
         for handle in MC_handles + [data_handle]:
             logging.info('sample = %s', handle.name)
 
-            for key_name in handle.get_keys_names():
+            handle_keys = sorted(set.union(handle.get_keys_names(), necessary_keys_names))
+            for key_name in handle_keys:
                 path_elems = key_name.split('/')
                 variable = path_elems[-1]
                 path_elems = path_elems[:-1]
